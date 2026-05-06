@@ -60,8 +60,8 @@ SharedPoolPtr<T>& SharedPoolPtr<T>::operator=(const SharedPoolPtr& other) {
 	if (this == &other) {
 		return *this;
 	}
-	auto currentPool = pool_;
-	auto currentHandle = handle_;
+	ISparsePool<T>* currentPool = pool_;
+	uint64_t currentHandle = handle_;
 	pool_ = other.pool_;
 	handle_ = other.handle_;
 	if (pool_) {

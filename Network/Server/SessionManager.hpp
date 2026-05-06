@@ -12,7 +12,7 @@ class SessionManager {
    public:
 	SharedPoolPtr<Session> CreateSession();
 	bool AddSession(uint64_t handle);
-	bool RemoveSession(uint64_t handle);
+	bool ReleaseSession(uint64_t handle);
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
 
    private:

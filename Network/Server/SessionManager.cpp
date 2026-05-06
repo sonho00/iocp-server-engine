@@ -7,7 +7,7 @@
 #include "Network/Common/SparsePool.hpp"
 
 SharedPoolPtr<Session> SessionManager::CreateSession() {
-	auto session = sessionPool_.Acquire();
+	SharedPoolPtr<Session> session = sessionPool_.Acquire();
 	if (!session.IsValid()) {
 		LOG_ERROR("Failed to create session: No available handles");
 		return nullptr;
@@ -28,7 +28,7 @@ bool SessionManager::AddSession(uint64_t handle) {
 	return true;
 }
 
-bool SessionManager::RemoveSession(uint64_t handle) {
+bool SessionManager::ReleaseSession(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	activeSessions_.Push(handle);
 	sessionPtrs_[idx].Reset();

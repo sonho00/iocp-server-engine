@@ -85,7 +85,7 @@ bool Listener::PostAccept() {
 		return false;
 	}
 
-	auto session = sessionManager_.CreateSession();
+	SharedPoolPtr<Session> session = sessionManager_.CreateSession();
 	if (!session.IsValid()) return false;
 
 	if (!RegisterAccept(hAcceptSocket, session)) {
@@ -98,7 +98,7 @@ bool Listener::PostAccept() {
 }
 
 bool Listener::RegisterAccept(SOCKET hAcceptSocket,
-							  SharedPoolPtr<Session> session) {
+							  SharedPoolPtr<Session>& session) {
 	session->readOv_.ioType_ = IO_TYPE::kAccept;
 	session->readOv_.wsaBuf_.buf = session->readOv_.buffer_.GetBuffer();
 	session->readOv_.wsaBuf_.len =
@@ -113,7 +113,7 @@ bool Listener::RegisterAccept(SOCKET hAcceptSocket,
 				  0, Config::kAcceptAddrSize, Config::kAcceptAddrSize,
 				  &bytesReceived, &session->readOv_.overlapped_);
 
-	if (result == FALSE) {
+	if (result == 0) {
 		int errorCode = WSAGetLastError();
 		if (errorCode != ERROR_IO_PENDING) {
 			LOG_ERROR("AcceptEx failed: {}", errorCode);
