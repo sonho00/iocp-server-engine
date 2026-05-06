@@ -9,6 +9,7 @@
 #include "Network/Common/WSAManager.hpp"
 #include "TestCase/01_Fragmentation.hpp"
 #include "TestCase/02_StickyPackets.hpp"
+#include "TestCase/03_ConnectionStress.hpp"
 
 std::array<char, 1 << 20> Client::sendBuf_{};
 std::array<char, 1 << 20> Client::recvBuf_{};
@@ -21,6 +22,7 @@ int main() {
 	std::vector<std::function<std::unique_ptr<Client>()>> testFactories = {
 		[&]() { return std::make_unique<Fragmentation>(); },
 		[&]() { return std::make_unique<StickyPackets>(); },
+		[&]() { return std::make_unique<ConnectionStress>(); },
 	};
 
 	for (int i = 0; i < testFactories.size(); ++i) {
