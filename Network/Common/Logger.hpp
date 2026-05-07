@@ -46,11 +46,12 @@ void LogInfo(LogLevel level, std::string_view fmt_str, Args&&... args) {
 		if (level < kLogLevel) return;
 		std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
-		std::cout << std::format("[{:%F %T}][{}]{}\n", now, GetLevelStr(level),
-								 msg);
+		std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n", now,
+								 GetLevelStr(level), GetCurrentThreadId(), msg);
 	} catch (const std::format_error& e) {
-		std::cerr << std::format("[{:%F %T}][{}]Log formatting error: {}\n",
-								 now, GetLevelStr(level), e.what());
+		std::cerr << std::format(
+			"[{:%F %T}][{}][Thread:{}] Log formatting error:{}\n", now,
+			GetLevelStr(level), GetCurrentThreadId(), e.what());
 	}
 }
 
@@ -62,9 +63,9 @@ void LogError(LogLevel level, std::string_view fmt_str,
 		if (level < kLogLevel) return;
 		std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
-		std::cerr << std::format("[{:%F %T}][{}]{}\n{}:{}\n", now,
-								 GetLevelStr(level), msg, location.file_name(),
-								 location.line());
+		std::cerr << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
+								 GetLevelStr(level), GetCurrentThreadId(), msg,
+								 location.file_name(), location.line());
 		if (level == LogLevel::kFatal) {
 			std::cout.flush();
 			std::cerr.flush();
@@ -72,9 +73,9 @@ void LogError(LogLevel level, std::string_view fmt_str,
 		}
 	} catch (const std::format_error& e) {
 		std::cerr << std::format(
-			"[{:%F %T}][{}]Log formatting error: {}\n{}:{}\n", now,
-			GetLevelStr(level), e.what(), location.file_name(),
-			location.line());
+			"[{:%F %T}][{}][Thread:{}] Log formatting error:{}\n{}:{}\n", now,
+			GetLevelStr(level), GetCurrentThreadId(), e.what(),
+			location.file_name(), location.line());
 	}
 }
 }  // namespace NetUtils
