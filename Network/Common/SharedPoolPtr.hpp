@@ -8,10 +8,12 @@ template <typename T>
 class SharedPoolPtr {
    public:
 	SharedPoolPtr(ISparsePool<T>* pool, uint64_t handle);
-	SharedPoolPtr(const SharedPoolPtr& other);
-	SharedPoolPtr(SharedPoolPtr&& other) noexcept;
 	SharedPoolPtr(std::nullptr_t = nullptr);
+
+	SharedPoolPtr(const SharedPoolPtr& other);
 	SharedPoolPtr& operator=(const SharedPoolPtr& other);
+
+	SharedPoolPtr(SharedPoolPtr&& other) noexcept;
 	SharedPoolPtr& operator=(SharedPoolPtr&& other) noexcept;
 
 	~SharedPoolPtr();
@@ -38,22 +40,15 @@ SharedPoolPtr<T>::SharedPoolPtr(ISparsePool<T>* pool, uint64_t handle)
 }
 
 template <typename T>
+SharedPoolPtr<T>::SharedPoolPtr(std::nullptr_t) : pool_(nullptr), handle_(0) {}
+
+template <typename T>
 SharedPoolPtr<T>::SharedPoolPtr(const SharedPoolPtr& other)
 	: pool_(other.pool_), handle_(other.handle_) {
 	if (pool_) {
 		pool_->AddRef(handle_);
 	}
 }
-
-template <typename T>
-SharedPoolPtr<T>::SharedPoolPtr(SharedPoolPtr&& other) noexcept
-	: pool_(other.pool_), handle_(other.handle_) {
-	other.pool_ = nullptr;
-	other.handle_ = 0;
-}
-
-template <typename T>
-SharedPoolPtr<T>::SharedPoolPtr(std::nullptr_t) : pool_(nullptr), handle_(0) {}
 
 template <typename T>
 SharedPoolPtr<T>& SharedPoolPtr<T>::operator=(const SharedPoolPtr& other) {
@@ -71,6 +66,13 @@ SharedPoolPtr<T>& SharedPoolPtr<T>::operator=(const SharedPoolPtr& other) {
 		currentPool->ReleaseRef(currentHandle);
 	}
 	return *this;
+}
+
+template <typename T>
+SharedPoolPtr<T>::SharedPoolPtr(SharedPoolPtr&& other) noexcept
+	: pool_(other.pool_), handle_(other.handle_) {
+	other.pool_ = nullptr;
+	other.handle_ = 0;
 }
 
 template <typename T>
