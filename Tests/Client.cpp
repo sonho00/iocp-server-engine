@@ -2,6 +2,8 @@
 
 #include <ws2tcpip.h>
 
+#include <array>
+
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Protocol.hpp"
 

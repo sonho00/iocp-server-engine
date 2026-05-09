@@ -5,6 +5,7 @@
 #include <array>
 
 #include "Network/Common/Protocol.hpp"
+#include "Network/Common/WSAManager.hpp"
 
 class Client {
    public:
@@ -24,11 +25,14 @@ class Client {
 
 	bool success_ = true;
 
-	static std::array<char, 1 << 20> sendBuf_;
-	static std::array<char, 1 << 20> recvBuf_;
+	inline static std::array<char, 1 << 20> sendBuf_;
+	inline static std::array<char, 1 << 20> recvBuf_;
 
 	static constexpr const char* kIpAddr_ = "127.0.0.1";
 	static constexpr uint16_t kPort_ = 12345;
+
+   private:
+	WSAManager wsaManager_;
 
    protected:
 	SOCKET socket_;

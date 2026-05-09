@@ -1,4 +1,4 @@
-#pragma once
+#include <gtest/gtest.h>
 
 #include <cstdio>
 #include <cstring>
@@ -43,3 +43,8 @@ class Fragmentation : public Client {
 		return success_ && memcmp(sendBuf_.data(), recvBuf_.data(), 404) == 0;
 	}
 };
+
+TEST(NetworkTest, Fragmentation) {
+	Fragmentation client;
+	EXPECT_TRUE(client.test());
+}

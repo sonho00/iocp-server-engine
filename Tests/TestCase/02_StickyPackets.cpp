@@ -1,4 +1,4 @@
-#pragma once
+#include <gtest/gtest.h>
 
 #include <cstdio>
 #include <cstring>
@@ -48,3 +48,8 @@ class StickyPackets : public Client {
 			   memcmp(sendBuf_.data(), recvBuf_.data(), 150012) == 0;
 	}
 };
+
+TEST(NetworkTest, StickyPackets) {
+	StickyPackets client;
+	EXPECT_TRUE(client.test());
+}
