@@ -8,7 +8,7 @@
 #include "Network/Common/SparsePool.hpp"
 #include "Session.hpp"
 
-enum class SessionState : uint8_t { kFree = 0, kPending = 1, kActive = 2 };
+enum class SessionState : uint8_t { kIdle = 0, kPending = 1, kActive = 2 };
 
 class SessionManager {
    public:

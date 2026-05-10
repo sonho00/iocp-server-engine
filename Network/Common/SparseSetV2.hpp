@@ -22,9 +22,8 @@ class SparseSetV2 {
 
 	SparseSetV2();
 
-	// idle(state 0)에서 핸들을 꺼내서 state로 이동.
-	// idle에 핸들이 없거나 state가 유효하지 않으면 kInvalidHandle 반환
-	[[nodiscard]] uint64_t Pop(size_t state = 1);
+	// state에 있는 핸들을 하나 반환. state에 핸들이 없으면 kInvalidHandle 반환
+	[[nodiscard]] uint64_t Pop(size_t state = 0);
 	// 핸들을 idle(state 0)로 이동. 핸들이 유효하지 않으면 false 반환
 	bool Push(uint64_t handle);
 
@@ -69,14 +68,12 @@ uint64_t SparseSetV2<N, stateCount>::Pop(size_t state) {
 	uint64_t handle;
 	{
 		std::lock_guard lock(mutex_);
-		if (cursor_[1] < 1) {
-			LOG_ERROR("No available handles.");
+		if (cursor_[state] == cursor_[state + 1]) {
+			LOG_WARN("No available handles.");
 			return kInvalidHandle;
 		}
 
-		// state 0에서 한 개를 꺼내서 state로 이동
-		handle = GetHandle(dense_[cursor_[1] - 1]);
-		MoveToStateInternal(handle, state);
+		handle = GetHandle(dense_[cursor_[state]]);
 	}
 	return handle;
 }
@@ -102,10 +99,7 @@ bool SparseSetV2<N, stateCount>::MoveToState(uint64_t handle, size_t newState) {
 		LOG_ERROR("Invalid newState: {}, stateCount: {}", newState, stateCount);
 		return false;
 	}
-	if (!IsValid(handle)) {
-		LOG_ERROR("Invalid handle: {}", handle);
-		return false;
-	}
+	if (!IsValid(handle)) return false;
 
 	std::lock_guard lock(mutex_);
 	return MoveToStateInternal(handle, newState);
@@ -153,10 +147,7 @@ bool SparseSetV2<N, stateCount>::IsValid(uint64_t handle) const {
 
 	bool valid = who < N && sparse_[who].generation_ == generation;
 	if (!valid) {
-		LOG_ERROR(
-			"Invalid handle: {}, who: {}, Expected generation: {}, "
-			"Actual generation: {}",
-			handle, who, generation, sparse_[who].generation_);
+		LOG_WARN("Invalid handle: {}", handle);
 	}
 	return valid;
 }

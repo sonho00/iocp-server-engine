@@ -8,11 +8,13 @@
 
 SharedPoolPtr<Session> SessionManager::CreateSession() {
 	SharedPoolPtr<Session> sessionPtr =
-		sessionPool_.Acquire(static_cast<size_t>(SessionState::kPending));
+		sessionPool_.Acquire(static_cast<size_t>(SessionState::kIdle));
 	if (!sessionPtr.IsValid()) {
 		LOG_ERROR("Failed to create session: No available handles");
 		return nullptr;
 	}
+	sessionPool_.MoveToState(sessionPtr.GetHandle(),
+							 static_cast<size_t>(SessionState::kPending));
 	sessionPtr->sessionManager_ = this;
 	sessionPtr->handle_ = sessionPtr.GetHandle();
 	auto idx = static_cast<uint32_t>(sessionPtr->handle_);
