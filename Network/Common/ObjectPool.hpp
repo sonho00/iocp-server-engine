@@ -1,10 +1,12 @@
 #pragma once
 
 #include <array>
-#include <memory>
+#include <cstddef>
+
+template <typename T>
+concept has_reset = requires(T obj) { obj.Reset(); };
 
 template <typename T, size_t N, bool isLazy = false>
-	requires std::derived_from<T, std::enable_shared_from_this<T>>
 class ObjectPool {
    public:
 	ObjectPool() {
@@ -15,17 +17,37 @@ class ObjectPool {
 		}
 	}
 
+	~ObjectPool() {
+		if constexpr (!isLazy) {
+			for (size_t i = 0; i < N; ++i) {
+				auto* obj = reinterpret_cast<T*>(&pool_[i * sizeof(T)]);
+				obj->~T();
+			}
+		}
+	}
+
 	template <typename... Args>
-	std::shared_ptr<T> Acquire(size_t idx, Args&&... args) {
+	T* Acquire(size_t idx, Args&&... args) {
 		T* obj = reinterpret_cast<T*>(&pool_[idx * sizeof(T)]);
+
 		if constexpr (isLazy) {
-			obj = new (obj) T(std::forward<Args>(args)...);
+			new (obj) T(std::forward<Args>(args)...);
+		} else if constexpr (has_reset<T>) {
+			obj->Reset(std::forward<Args>(args)...);
 		}
 
-		return std::shared_ptr<T>(obj, [this, idx](T* ptr) {
-			if constexpr (isLazy) ptr->~T();
-		});
+		return obj;
 	};
+
+	bool Release(size_t idx) {
+		T* obj = reinterpret_cast<T*>(&pool_[idx * sizeof(T)]);
+		if constexpr (isLazy) {
+			obj->~T();
+		}
+		return true;
+	}
+
+	T* Get(size_t idx) { return reinterpret_cast<T*>(&pool_[idx * sizeof(T)]); }
 
    private:
 	alignas(T) std::array<std::byte, sizeof(T) * N> pool_;
