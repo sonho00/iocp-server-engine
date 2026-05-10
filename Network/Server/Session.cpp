@@ -32,7 +32,8 @@ bool Session::RegisterRead() {
 	if (recvResult == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}] WSARecv failed: {}", handle_, errorCode);
+			LOG_ERROR("[Session:{}][Error:{}] WSARecv failed", handle_,
+					  errorCode);
 			return false;
 		}
 	}
@@ -56,7 +57,8 @@ bool Session::RegisterWrite() {
 	if (sendResult == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}] WSASend failed: {}", handle_, errorCode);
+			LOG_ERROR("[Session:{}][Error:{}] WSASend failed", handle_,
+					  errorCode);
 			return false;
 		}
 	}
@@ -89,6 +91,11 @@ bool Session::SendPacket(const PACKET_HEADER& header) {
 }
 
 bool Session::OnRead(DWORD bytesTransferred) {
+	if (readOv_.sessionPtr_.Reset()) {
+		LOG_INFO("[Session:{}] Session reset after read completion", handle_);
+		return true;
+	}
+
 	readOv_.writePos_ += bytesTransferred;
 
 	while (true) {
@@ -118,11 +125,6 @@ bool Session::OnRead(DWORD bytesTransferred) {
 		readOv_.readPos_ += header->size;
 	}
 
-	if (readOv_.sessionPtr_.Reset()) {
-		LOG_INFO("[Session:{}] Session reset after read completion", handle_);
-		return true;
-	}
-
 	if (readOv_.readPos_ >= readOv_.buffer_.GetSize()) {
 		readOv_.readPos_ -= readOv_.buffer_.GetSize();
 		readOv_.writePos_ -= readOv_.buffer_.GetSize();
@@ -138,14 +140,14 @@ bool Session::OnRead(DWORD bytesTransferred) {
 
 bool Session::OnWrite(DWORD bytesTransferred) {
 	// 이 함수가 호출될 때는 is sending_가 true인 상태입니다.
-	std::lock_guard<std::mutex> lock(mtx_);
-	writeOv_.readPos_ += bytesTransferred;
-
 	if (writeOv_.sessionPtr_.Reset()) {
 		LOG_INFO("[Session:{}] Session released after write completion",
 				 handle_);
 		return true;
 	}
+
+	std::lock_guard<std::mutex> lock(mtx_);
+	writeOv_.readPos_ += bytesTransferred;
 
 	if (writeOv_.readPos_ >= writeOv_.buffer_.GetSize()) {
 		writeOv_.readPos_ -= writeOv_.buffer_.GetSize();
