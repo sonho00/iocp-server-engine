@@ -95,13 +95,11 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx) {
 	}
 }
 
-void IocpCore::Dispatch(ULONG_PTR completionKey, OverlappedEx* overlappedEx,
-						DWORD bytesTransferred) {
+void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
 	SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
 	switch (overlappedEx->ioType_) {
 		case IO_TYPE::kAccept: {
-			auto* listener = reinterpret_cast<Listener*>(completionKey);
-			if (!listener->HandleAccept(session)) {
+			if (!session->listener_->HandleAccept(session)) {
 				LOG_ERROR("[Session:{}] Failed to handle accept",
 						  session->GetHandle());
 				session->Disconnect();
@@ -111,6 +109,9 @@ void IocpCore::Dispatch(ULONG_PTR completionKey, OverlappedEx* overlappedEx,
 		case IO_TYPE::kDisconnect: {
 			LOG_INFO("[Session:{}] Disconnect completed", session->GetHandle());
 			session->Reset();
+			if (!session->listener_->PostAccept()) {
+				LOG_ERROR("Failed to post accept after disconnect");
+			}
 			break;
 		}
 		case IO_TYPE::kRecv:
@@ -172,7 +173,7 @@ void IocpCore::WorkerThread() {
 				  session->GetHandle(), static_cast<int>(overlappedEx->ioType_),
 				  bytesTransferred);
 
-		Dispatch(completionKey, overlappedEx, bytesTransferred);
+		Dispatch(overlappedEx, bytesTransferred);
 	}
 }
 // NOLINTEND(performance-no-int-to-ptr)

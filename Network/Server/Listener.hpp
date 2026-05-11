@@ -28,4 +28,6 @@ class Listener {
 	IocpCore& iocpCore_;
 	SessionManager& sessionManager_;
 	uint16_t port_;
+
+	size_t pendingAccepts_ = 0;
 };

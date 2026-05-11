@@ -50,6 +50,7 @@ Listener::~Listener() {
 }
 
 bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
+	pendingAccepts_--;
 	PostAccept();
 
 	if (setsockopt(session->socket_, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
@@ -74,22 +75,26 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 }
 
 bool Listener::PostAccept() {
-	SOCKET hAcceptSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr,
-									 0, WSA_FLAG_OVERLAPPED);
-	if (hAcceptSocket == INVALID_SOCKET) {
-		LOG_ERROR("Failed to create accept socket");
-		return false;
+	while (pendingAccepts_ < Config::kAcceptCount) {
+		SOCKET hAcceptSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP,
+										 nullptr, 0, WSA_FLAG_OVERLAPPED);
+		if (hAcceptSocket == INVALID_SOCKET) {
+			LOG_ERROR("Failed to create accept socket");
+			return false;
+		}
+		SharedPoolPtr<Session> session = sessionManager_.CreateSession();
+		if (!session.IsValid()) return false;
+
+		if (!RegisterAccept(session->socket_, session)) {
+			LOG_ERROR("Failed to post AcceptEx");
+			session->Disconnect();
+			return false;
+		}
+
+		session->listener_ = this;
+		pendingAccepts_++;
+		LOG_DEBUG("Posted AcceptEx - Pending accepts: {}", pendingAccepts_);
 	}
-
-	SharedPoolPtr<Session> session = sessionManager_.CreateSession();
-	if (!session.IsValid()) return false;
-
-	if (!RegisterAccept(hAcceptSocket, session)) {
-		LOG_ERROR("Failed to post AcceptEx");
-		session->Disconnect();
-		return false;
-	}
-
 	return true;
 }
 

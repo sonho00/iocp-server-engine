@@ -9,7 +9,7 @@ constexpr uint16_t kPort = 12345;
 constexpr uint32_t kClientCount = 16;
 
 constexpr uint32_t kPoolSize = 4096;
-constexpr uint32_t kInitialAcceptCount = 16;
+constexpr uint32_t kAcceptCount = 16;
 
 constexpr uint32_t kChatPacketSize = 256;
 constexpr uint32_t kAcceptAddrSize = sizeof(sockaddr_in) + 16;

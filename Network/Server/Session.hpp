@@ -12,6 +12,7 @@
 #include "OverlappedEx.hpp"
 
 class SessionManager;
+class Listener;
 
 class Session {
 	friend class SessionManager;
@@ -39,6 +40,7 @@ class Session {
 	OverlappedEx writeOv_;
 	OverlappedEx disconnectOv_;
 	SOCKET socket_ = INVALID_SOCKET;
+	Listener* listener_ = nullptr;
 
    private:
 	SessionManager* sessionManager_ = nullptr;
