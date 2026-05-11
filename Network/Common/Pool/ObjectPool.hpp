@@ -4,7 +4,10 @@
 #include <cstddef>
 
 template <typename T>
-concept has_reset = requires(T obj) { obj.Reset(); };
+concept hasInit = requires(T obj) { obj.Init(); };
+
+template <typename T>
+concept hasClear = requires(T obj) { obj.Clear(); };
 
 template <typename T, size_t N, bool isLazy = false>
 class ObjectPool {
@@ -32,8 +35,8 @@ class ObjectPool {
 
 		if constexpr (isLazy) {
 			new (obj) T(std::forward<Args>(args)...);
-		} else if constexpr (has_reset<T>) {
-			obj->Reset(std::forward<Args>(args)...);
+		} else if constexpr (hasInit<T>) {
+			obj->Init(std::forward<Args>(args)...);
 		}
 
 		return obj;
@@ -41,9 +44,13 @@ class ObjectPool {
 
 	bool Release(size_t idx) {
 		T* obj = reinterpret_cast<T*>(&pool_[idx * sizeof(T)]);
+
 		if constexpr (isLazy) {
 			obj->~T();
+		} else if constexpr (hasClear<T>) {
+			obj->Clear();
 		}
+
 		return true;
 	}
 

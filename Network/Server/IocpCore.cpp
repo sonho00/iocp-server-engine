@@ -69,7 +69,7 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx) {
 					"[Session:{}][Error:{}] DisconnectEx failed - client "
 					"already disconnected",
 					session->GetHandle(), errorCode);
-				session->Reset();
+				session->Clear();
 				return;
 			}
 		case ERROR_SUCCESS:
@@ -90,7 +90,7 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx) {
 				"[Session:{}][Error:{}] I/O operation failed or connection "
 				"closed unexpectedly ",
 				session->GetHandle(), errorCode);
-			session.Reset();
+			session->Disconnect();
 			break;
 	}
 }
@@ -108,7 +108,7 @@ void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
 		}
 		case IO_TYPE::kDisconnect: {
 			LOG_INFO("[Session:{}] Disconnect completed", session->GetHandle());
-			session->Reset();
+			session->Clear();
 			if (!session->listener_->PostAccept()) {
 				LOG_ERROR("Failed to post accept after disconnect");
 			}

@@ -38,8 +38,6 @@ Listener::Listener(IocpCore& iocpCore, SessionManager& sessionManager,
 	if (!iocpCore_.Register(socket_, reinterpret_cast<ULONG_PTR>(this))) {
 		LOG_FATAL("Failed to register listener socket with IOCP");
 	}
-
-	LOG_DEBUG("Listener address: {}", static_cast<void*>(this));
 }
 
 Listener::~Listener() {
@@ -76,12 +74,6 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 
 bool Listener::PostAccept() {
 	while (pendingAccepts_ < Config::kAcceptCount) {
-		SOCKET hAcceptSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP,
-										 nullptr, 0, WSA_FLAG_OVERLAPPED);
-		if (hAcceptSocket == INVALID_SOCKET) {
-			LOG_ERROR("Failed to create accept socket");
-			return false;
-		}
 		SharedPoolPtr<Session> session = sessionManager_.CreateSession();
 		if (!session.IsValid()) return false;
 

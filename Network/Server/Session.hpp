@@ -18,9 +18,7 @@ class Session {
 	friend class SessionManager;
 
    public:
-	Session()
-		: readOv_(Config::kMagicBufferSize),
-		  writeOv_(Config::kMagicBufferSize) {}
+	Session();
 
 	bool RegisterRead();
 	bool RegisterWrite();
@@ -30,9 +28,8 @@ class Session {
 	bool OnWrite(DWORD bytesTransferred);
 	bool HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred);
 
-	void Disconnect();
-	void Reset();
-	void ReCreate();
+	bool Disconnect();
+	bool Clear();
 
 	[[nodiscard]] uint64_t GetHandle() const { return handle_; }
 

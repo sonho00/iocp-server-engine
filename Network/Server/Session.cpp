@@ -12,6 +12,15 @@
 #include "ServerUtils.hpp"
 #include "SessionManager.hpp"
 
+Session::Session()
+	: readOv_(Config::kMagicBufferSize), writeOv_(Config::kMagicBufferSize) {
+	socket_ = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
+						WSA_FLAG_OVERLAPPED);
+	if (socket_ == INVALID_SOCKET) {
+		LOG_ERROR("Failed to create accept socket");
+	}
+}
+
 bool Session::RegisterRead() {
 	readOv_.wsaBuf_.len =
 		readOv_.buffer_.GetSize() - readOv_.writePos_ + readOv_.readPos_;
@@ -180,10 +189,10 @@ bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
 	}
 }
 
-void Session::Disconnect() {
+bool Session::Disconnect() {
 	std::lock_guard<std::mutex> lock(mtx_);
 	if (socket_ == INVALID_SOCKET) {
-		return;
+		return false;
 	}
 
 	disconnectOv_.ioType_ = IO_TYPE::kDisconnect;
@@ -201,13 +210,16 @@ void Session::Disconnect() {
 	}
 
 	socket_ = INVALID_SOCKET;
+	return true;
 }
 
-void Session::Reset() {
-	std::lock_guard<std::mutex> lock(mtx_);
+bool Session::Clear() {
 	readOv_.Reset();
 	writeOv_.Reset();
 	disconnectOv_.Reset();
 	socket_ = INVALID_SOCKET;
 	isSending_ = false;
+	sessionManager_->DisconnectSession(handle_);
+	handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
+	return true;
 }
