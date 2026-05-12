@@ -9,9 +9,12 @@
 #include "Session.hpp"
 
 enum class SessionState : uint8_t { kIdle = 0, kPending = 1, kActive = 2 };
+class Listener;
 
 class SessionManager {
    public:
+	SessionManager();
+
 	SharedPoolPtr<Session> CreateSession();
 	bool ConnectSession(uint64_t handle);
 	bool DisconnectSession(uint64_t handle);

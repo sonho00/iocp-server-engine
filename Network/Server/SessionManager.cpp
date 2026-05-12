@@ -2,9 +2,19 @@
 
 #include <cstdint>
 
+#include "Listener.hpp"
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Pool/SparsePool.hpp"
+#include "Session.hpp"
+
+SessionManager::SessionManager()
+	: sessionPool_([this](Session* session) {
+		  LOG_DEBUG("[Session:{}] Custom deleter called", session->handle_);
+		  LOG_DEBUG("this:{}", static_cast<void*>(this));
+		  session->handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
+		  session->listener_->PostAccept();
+	  }) {}
 
 SharedPoolPtr<Session> SessionManager::CreateSession() {
 	SharedPoolPtr<Session> sessionPtr =

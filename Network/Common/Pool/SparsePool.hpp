@@ -11,8 +11,16 @@
 template <typename T, size_t N, size_t StateCount = 2, bool isLazy = false>
 class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 	using Slot = ISparsePool<T>::Slot;
+	using deleteFunc = std::function<void(T*)>;
 
    public:
+	SparsePool(deleteFunc deleter = nullptr)
+		: pool_([deleter](Slot* slot) {
+			  if (deleter) {
+				  deleter(&slot->obj_);
+			  }
+		  }) {}
+
 	template <typename... Args>
 	SharedPoolPtr<T> Acquire(size_t state = 1, Args&&... args);
 	bool Release(uint64_t handle) override;
