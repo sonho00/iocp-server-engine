@@ -11,24 +11,29 @@
 class StickyPackets : public Client {
    public:
 	void ThreadFunc() override {
+		reinterpret_cast<PACKET_HEADER*>(sendBuf_.data())->size = 50004;
 		reinterpret_cast<PACKET_HEADER*>(sendBuf_.data())->id =
 			static_cast<uint16_t>(C2S_PACKET_ID::kChat);
-		reinterpret_cast<PACKET_HEADER*>(sendBuf_.data())->size = 50004;
 
 		for (int i = 0; i < 10000; ++i) {
 			sprintf_s(sendBuf_.data() + sizeof(PACKET_HEADER) + i * 5, 6,
 					  "%04d ", i);
 		}
 
-		memcpy(sendBuf_.data() + 50004, sendBuf_.data(), 50004);
-		memcpy(sendBuf_.data() + 100008, sendBuf_.data(), 50004);
-
 		int result;
-		result = send(socket_, sendBuf_.data(), 150012, 0);
-		if (result == SOCKET_ERROR) {
-			success_ = false;
-			LOG_ERROR("Failed to send data: {}", WSAGetLastError());
-			return;
+		for (int i = 0; i < 3; ++i) {
+			result = SendPacket(reinterpret_cast<const PACKET_HEADER&>(
+				sendBuf_.data()[i * 50004]));
+			if (result == SOCKET_ERROR) {
+				success_ = false;
+				LOG_ERROR("Failed to send data: {}", WSAGetLastError());
+				return;
+			}
+			if (i < 2) {
+				memcpy(sendBuf_.data() + (i + 1) * 50004, sendBuf_.data(),
+					   50004);
+			}
+			Sleep(1);
 		}
 
 		if (!ReceiveByte(recvBuf_.data(), 150012)) {
