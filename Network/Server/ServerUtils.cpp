@@ -3,6 +3,7 @@
 #include <WinSock2.h>
 
 #include "Network/Common/Logger.hpp"
+#include "Session.hpp"
 
 namespace ServerUtils {
 NetFuncs::NetFuncs() {
@@ -40,6 +41,45 @@ NetFuncs::NetFuncs() {
 	closesocket(dummySocket);
 }
 
+void HandleError(SharedPoolPtr<Session>& session, int errorCode) {
+	switch (errorCode) {
+		case ERROR_SUCCESS:
+		case WSAECONNRESET:
+			LOG_INFO("[Session:{}][Error:{}] Graceful disconnect detected",
+					 session->GetHandle(), errorCode);
+			session->Disconnect();
+			break;
+
+		case ERROR_NETNAME_DELETED:
+			LOG_INFO("[Session:{}][Error:{}] Abortive disconnect detected",
+					 session->GetHandle(), errorCode);
+			session->Disconnect();
+			break;
+
+		case ERROR_OPERATION_ABORTED:
+			LOG_INFO(
+				"[Session:{}][Error:{}] Operation aborted, likely due to "
+				"server shutdown",
+				session->GetHandle(), errorCode);
+			session->Disconnect();
+			break;
+
+		case ERROR_IO_PENDING:
+			LOG_INFO(
+				"[Session:{}][Error:{}] I/O operation pending, no immediate "
+				"error",
+				session->GetHandle(), errorCode);
+			break;
+
+		default:
+			LOG_ERROR(
+				"[Session:{}][Error:{}] I/O operation failed or connection "
+				"closed unexpectedly ",
+				session->GetHandle(), errorCode);
+			session->Disconnect();
+			break;
+	}
+}
 LPFN_ACCEPTEX AcceptEx = nullptr;
 LPFN_DISCONNECTEX DisconnectEx = nullptr;
 }  // namespace ServerUtils

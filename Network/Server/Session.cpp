@@ -40,12 +40,7 @@ bool Session::RegisterRead() {
 							 &readOv_.overlapped_, nullptr);
 
 	if (recvResult == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}][Error:{}] WSARecv failed", handle_,
-					  errorCode);
-			return false;
-		}
+		ServerUtils::HandleError(readOv_.sessionPtr_, WSAGetLastError());
 	}
 
 	return true;
@@ -65,12 +60,7 @@ bool Session::RegisterWrite() {
 							 &writeOv_.overlapped_, nullptr);
 
 	if (sendResult == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}][Error:{}] WSASend failed", handle_,
-					  errorCode);
-			return false;
-		}
+		ServerUtils::HandleError(writeOv_.sessionPtr_, WSAGetLastError());
 	}
 
 	return true;
@@ -207,11 +197,7 @@ bool Session::Disconnect() {
 	int result = ServerUtils::DisconnectEx(socket_, &disconnectOv_.overlapped_,
 										   TF_REUSE_SOCKET, 0);
 	if (result == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}][Error:{}] DisconnectEx failed", handle_,
-					  errorCode);
-		}
+		ServerUtils::HandleError(disconnectOv_.sessionPtr_, WSAGetLastError());
 	}
 
 	return true;

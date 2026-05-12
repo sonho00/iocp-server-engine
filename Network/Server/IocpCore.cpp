@@ -10,6 +10,7 @@
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "OverlappedEx.hpp"
+#include "ServerUtils.hpp"
 #include "Session.hpp"
 
 IocpCore::IocpCore() {
@@ -59,33 +60,6 @@ bool IocpCore::Register(SOCKET socket, ULONG_PTR completionKey) const {
 	return true;
 }
 
-void IocpCore::HandleError(OverlappedEx& overlappedEx) {
-	SharedPoolPtr<Session> session = overlappedEx.sessionPtr_;
-	DWORD errorCode = GetLastError();
-	switch (errorCode) {
-		case ERROR_SUCCESS:
-		case ERROR_IO_PENDING:
-			LOG_INFO("[Session:{}][Error:{}] Graceful disconnect detected",
-					 session->GetHandle(), errorCode);
-			session->Disconnect();
-			break;
-
-		case ERROR_NETNAME_DELETED:
-			LOG_INFO("[Session:{}][Error:{}] Abortive disconnect detected",
-					 session->GetHandle(), errorCode);
-			session->Disconnect();
-			break;
-
-		default:
-			LOG_ERROR(
-				"[Session:{}][Error:{}] I/O operation failed or connection "
-				"closed unexpectedly ",
-				session->GetHandle(), errorCode);
-			session->Disconnect();
-			break;
-	}
-}
-
 void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
 	SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
 	switch (overlappedEx->ioType_) {
@@ -94,6 +68,8 @@ void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
 				LOG_ERROR("[Session:{}] Failed to handle accept",
 						  session->GetHandle());
 				session->Disconnect();
+			} else {
+				LOG_INFO("[Session:{}] Accept completed", session->GetHandle());
 			}
 			break;
 		}
@@ -149,13 +125,12 @@ void IocpCore::WorkerThread() {
 
 		OverlappedEx* overlappedEx =
 			CONTAINING_RECORD(overlapped, OverlappedEx, overlapped_);
+		SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
 
 		if (result == FALSE) {
-			HandleError(*overlappedEx);
+			ServerUtils::HandleError(session, static_cast<int>(GetLastError()));
 			continue;
 		}
-
-		SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
 
 		LOG_DEBUG("[Session:{}] IOType: {} BytesTransferred: {}",
 				  session->GetHandle(), static_cast<int>(overlappedEx->ioType_),
