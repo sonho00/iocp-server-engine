@@ -18,9 +18,9 @@ struct OverlappedEx {
 		ioType_ = IO_TYPE::kNone;
 		wsaBuf_ = {};
 		buffer_.Clear();
-		sessionPtr_.Reset();
 		readPos_ = 0;
 		writePos_ = 0;
+		sessionPtr_.Reset();
 	}
 
 	OVERLAPPED overlapped_ = {};
