@@ -84,6 +84,8 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 		return false;
 	}
 
+	sessionManager_.ConnectSession(session->GetHandle());
+
 	return true;
 }
 
