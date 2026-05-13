@@ -12,9 +12,9 @@
 #include "Session.hpp"
 
 SessionManager::SessionManager()
-	: sessionPool_([](Session* session) {
-		  session->handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
-		  session->listener_->PostAccept();
+	: sessionPool_([](Session* sessionPtr) {
+		  sessionPtr->handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
+		  sessionPtr->listener_->PostAccept();
 	  }) {}
 
 bool SessionManager::Init(IocpCore& iocpCore) {
@@ -22,8 +22,8 @@ bool SessionManager::Init(IocpCore& iocpCore) {
 		static_cast<size_t>(SessionState::kIdle));
 
 	return std::ranges::all_of(handles, [this, &iocpCore](uint64_t handle) {
-		Session* session = sessionPool_.GetObj(handle);
-		if (!iocpCore.Register(session->socket_, session->GetHandle())) {
+		Session* sessionPtr = sessionPool_.GetObj(handle);
+		if (!iocpCore.Register(sessionPtr->socket_, sessionPtr->GetHandle())) {
 			LOG_ERROR("Failed to register accept socket with IOCP");
 			return false;
 		}
@@ -70,8 +70,7 @@ SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {
 }
 
 SessionState SessionManager::GetState(uint64_t handle) {
-	return static_cast<SessionState>(
-		sessionPool_.GetState(handle));
+	return static_cast<SessionState>(sessionPool_.GetState(handle));
 }
 
 bool SessionManager::SetState(uint64_t handle, SessionState newState) {

@@ -100,48 +100,47 @@ bool Listener::PostAccept() {
 		if (!pendingAccepts_.compare_exchange_strong(current, current + 1))
 			continue;
 
-		SharedPoolPtr<Session> session = sessionManager_.CreateSession();
-		if (!session.IsValid()) {
+		SharedPoolPtr<Session> sessionPtr = sessionManager_.CreateSession();
+		if (!sessionPtr.IsValid()) {
 			pendingAccepts_--;
 			LOG_WARN("No available session for accept");
 			return false;
 		}
 
-		if (!RegisterAccept(session)) {
+		if (!RegisterAccept(sessionPtr)) {
 			pendingAccepts_--;
 			LOG_ERROR("[Session:{}] Failed to post AcceptEx",
-					  session->GetHandle());
-			session->Disconnect();
+					  sessionPtr.GetHandle());
+			sessionPtr->Disconnect();
 			return false;
 		}
 
-		session->listener_ = this;
-		LOG_DEBUG("Posted AcceptEx - Pending accepts: {}",
-				  pendingAccepts_.load());
+		sessionPtr->listener_ = this;
 	}
 	return true;
 }
 
 // NOLINTNEXTLINE readability-make-member-function-const
-bool Listener::RegisterAccept(SharedPoolPtr<Session>& session) {
-	session->readOv_.ioType_ = IO_TYPE::kAccept;
-	session->readOv_.wsaBuf_.buf = session->readOv_.buffer_.GetBuffer();
-	session->readOv_.wsaBuf_.len =
-		static_cast<ULONG>(session->readOv_.buffer_.GetSize());
-	ZeroMemory(&session->readOv_.overlapped_, sizeof(OVERLAPPED));
-	session->readOv_.sessionPtr_ = session;
+bool Listener::RegisterAccept(SharedPoolPtr<Session>& sessionPtr) {
+	sessionPtr->readOv_.ioType_ = IO_TYPE::kAccept;
+	sessionPtr->readOv_.wsaBuf_.buf = sessionPtr->readOv_.buffer_.GetBuffer();
+	sessionPtr->readOv_.wsaBuf_.len =
+		static_cast<ULONG>(sessionPtr->readOv_.buffer_.GetSize());
+	ZeroMemory(&sessionPtr->readOv_.overlapped_, sizeof(OVERLAPPED));
+	sessionPtr->readOv_.sessionPtr_ = sessionPtr;
 
 	DWORD bytesReceived = 0;
-	BOOL result = ServerUtils::AcceptEx(
-		socket_, session->GetSocket(), session->readOv_.buffer_.GetBuffer(), 0,
-		Config::kAcceptAddrSize, Config::kAcceptAddrSize, &bytesReceived,
-		&session->readOv_.overlapped_);
+	BOOL result =
+		ServerUtils::AcceptEx(socket_, sessionPtr->GetSocket(),
+							  sessionPtr->readOv_.buffer_.GetBuffer(), 0,
+							  Config::kAcceptAddrSize, Config::kAcceptAddrSize,
+							  &bytesReceived, &sessionPtr->readOv_.overlapped_);
 
 	if (result == 0) {
 		int errorCode = WSAGetLastError();
 		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}] AcceptEx failed: {}", session.GetHandle(),
-					  errorCode);
+			LOG_ERROR("[Session:{}] AcceptEx failed: {}",
+					  sessionPtr->GetHandle(), errorCode);
 			return false;
 		}
 	}

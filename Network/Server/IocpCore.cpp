@@ -61,47 +61,47 @@ bool IocpCore::Register(SOCKET socket, ULONG_PTR completionKey) const {
 }
 
 void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
-	SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
+	SharedPoolPtr<Session> sessionPtr = overlappedEx->sessionPtr_;
 	switch (overlappedEx->ioType_) {
 		case IO_TYPE::kAccept: {
-			if (!session->listener_->HandleAccept(session)) {
+			if (!sessionPtr->listener_->HandleAccept(sessionPtr)) {
 				LOG_ERROR("[Session:{}] Failed to handle accept",
-						  session->GetHandle());
+						  sessionPtr->GetHandle());
 			} else {
-				LOG_INFO("[Session:{}] Accept completed", session->GetHandle());
+				LOG_INFO("[Session:{}] Accept completed", sessionPtr->GetHandle());
 			}
 			break;
 		}
 		case IO_TYPE::kDisconnect: {
-			LOG_INFO("[Session:{}] Disconnect completed", session->GetHandle());
-			session->Clear();
+			LOG_INFO("[Session:{}] Disconnect completed", sessionPtr->GetHandle());
+			sessionPtr->Clear();
 			break;
 		}
 		case IO_TYPE::kRecv:
 		case IO_TYPE::kSend: {
 			LOG_DEBUG("[Session:{}] Dispatching I/O event - IOType: {}",
-					  session->GetHandle(),
+					  sessionPtr->GetHandle(),
 					  static_cast<int>(overlappedEx->ioType_));
 
 			if (bytesTransferred == 0) {
 				LOG_INFO("[Session:{}] Connection closed by client",
-						 session->GetHandle());
-				session->Disconnect();
+						 sessionPtr->GetHandle());
+				sessionPtr->Disconnect();
 				return;
 			}
 
-			if (!session->HandleIO(*overlappedEx, bytesTransferred)) {
+			if (!sessionPtr->HandleIO(*overlappedEx, bytesTransferred)) {
 				LOG_ERROR("[Session:{}] Failed to handle I/O operation",
-						  session->GetHandle());
-				session->Disconnect();
+						  sessionPtr->GetHandle());
+				sessionPtr->Disconnect();
 			}
 			break;
 		}
 		default:
 			LOG_ERROR("[Session:{}] Unknown I/O type: {}",
-					  overlappedEx->sessionPtr_->GetHandle(),
+					  sessionPtr->GetHandle(),
 					  static_cast<int>(overlappedEx->ioType_));
-			session->Disconnect();
+			sessionPtr->Disconnect();
 			return;
 	}
 }
@@ -125,19 +125,19 @@ void IocpCore::WorkerThread() {
 
 		OverlappedEx* overlappedEx =
 			CONTAINING_RECORD(overlapped, OverlappedEx, overlapped_);
-		SharedPoolPtr<Session> session = overlappedEx->sessionPtr_;
+		SharedPoolPtr<Session> sessionPtr = overlappedEx->sessionPtr_;
 
 		if (overlappedEx->ioType_ == IO_TYPE::kAccept) {
-			session->listener_->DecrementPendingAccepts();
+			sessionPtr->listener_->DecrementPendingAccepts();
 		}
 
 		if (result == FALSE) {
-			ServerUtils::HandleError(session, static_cast<int>(GetLastError()));
+			ServerUtils::HandleError(sessionPtr, static_cast<int>(GetLastError()));
 			continue;
 		}
 
 		LOG_DEBUG("[Session:{}] IOType: {} BytesTransferred: {}",
-				  session->GetHandle(), static_cast<int>(overlappedEx->ioType_),
+				  sessionPtr->GetHandle(), static_cast<int>(overlappedEx->ioType_),
 				  bytesTransferred);
 
 		Dispatch(overlappedEx, bytesTransferred);
