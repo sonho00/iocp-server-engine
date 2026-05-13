@@ -68,13 +68,15 @@ void IocpCore::Dispatch(OverlappedEx* overlappedEx, DWORD bytesTransferred) {
 				LOG_ERROR("[Session:{}] Failed to handle accept",
 						  sessionPtr->GetHandle());
 			} else {
-				LOG_INFO("[Session:{}] Accept completed", sessionPtr->GetHandle());
+				LOG_INFO("[Session:{}] Accept completed",
+						 sessionPtr->GetHandle());
 			}
 			break;
 		}
 		case IO_TYPE::kDisconnect: {
-			LOG_INFO("[Session:{}] Disconnect completed", sessionPtr->GetHandle());
-			sessionPtr->Clear();
+			LOG_INFO("[Session:{}] Disconnect completed",
+					 sessionPtr->GetHandle());
+			sessionPtr->disconnectOv_.Reset();
 			break;
 		}
 		case IO_TYPE::kRecv:
@@ -132,13 +134,14 @@ void IocpCore::WorkerThread() {
 		}
 
 		if (result == FALSE) {
-			ServerUtils::HandleError(sessionPtr, static_cast<int>(GetLastError()));
+			ServerUtils::HandleError(sessionPtr,
+									 static_cast<int>(GetLastError()));
 			continue;
 		}
 
 		LOG_DEBUG("[Session:{}] IOType: {} BytesTransferred: {}",
-				  sessionPtr->GetHandle(), static_cast<int>(overlappedEx->ioType_),
-				  bytesTransferred);
+				  sessionPtr->GetHandle(),
+				  static_cast<int>(overlappedEx->ioType_), bytesTransferred);
 
 		Dispatch(overlappedEx, bytesTransferred);
 	}

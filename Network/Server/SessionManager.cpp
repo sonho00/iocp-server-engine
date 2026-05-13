@@ -13,7 +13,7 @@
 
 SessionManager::SessionManager()
 	: sessionPool_([](Session* sessionPtr) {
-		  sessionPtr->handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
+		  sessionPtr->Clear();
 		  sessionPtr->listener_->PostAccept();
 	  }) {}
 

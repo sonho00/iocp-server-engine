@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include "Network/Common/Logger.hpp"
+#include "Network/Common/Pool/ISparsePool.hpp"
 #include "Network/Common/Protocol.hpp"
 #include "OverlappedEx.hpp"
 #include "PacketHandler.hpp"
@@ -181,7 +182,7 @@ bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
 
 bool Session::Disconnect() {
 	std::lock_guard<std::mutex> lock(mtx_);
-	
+
 	if (sessionManager_->GetState(handle_) == SessionState::kDisconnecting) {
 		LOG_INFO("[Session:{}] Already disconnecting", handle_);
 		return true;
@@ -206,5 +207,6 @@ bool Session::Clear() {
 	disconnectOv_.Reset();
 	isSending_ = false;
 	sessionManager_->DisconnectSession(handle_);
+	handle_ = ISparsePool<Session>::kInvalidHandle;
 	return true;
 }
