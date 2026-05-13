@@ -54,17 +54,10 @@ class Session {
 
 	Listener* listener_ = nullptr;
 	SessionManager* sessionManager_ = nullptr;
+
 	SOCKET socket_ = INVALID_SOCKET;
 	uint64_t handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
-	std::mutex mtx_;
 	bool isSending_ = false;
 
-	std::array<std::function<bool(DWORD bytesTransferred)>,
-			   static_cast<size_t>(IO_TYPE::kCnt)>
-		inputHandlers_ = {
-			nullptr,
-			[this](DWORD bytesTransferred) { return OnRead(bytesTransferred); },
-			[this](DWORD bytesTransferred) {
-				return OnWrite(bytesTransferred);
-			}};
+	std::mutex mtx_;
 };
