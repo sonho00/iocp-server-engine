@@ -11,12 +11,15 @@
 #include <string>
 #include <string_view>
 
-#define LOG_DEBUG(fmt, ...) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kDebug, fmt, ##__VA_ARGS__)
-#define LOG_INFO(fmt, ...) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kInfo, fmt, ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kWarn, fmt, ##__VA_ARGS__)
+#define LOG_DEBUG(fmt, ...)                            \
+	NetUtils::LogInfo(NetUtils::LogLevel::kDebug, fmt, \
+					  std::source_location::current(), ##__VA_ARGS__)
+#define LOG_INFO(fmt, ...)                            \
+	NetUtils::LogInfo(NetUtils::LogLevel::kInfo, fmt, \
+					  std::source_location::current(), ##__VA_ARGS__)
+#define LOG_WARN(fmt, ...)                            \
+	NetUtils::LogInfo(NetUtils::LogLevel::kWarn, fmt, \
+					  std::source_location::current(), ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...)                             \
 	NetUtils::LogError(NetUtils::LogLevel::kError, fmt, \
 					   std::source_location::current(), ##__VA_ARGS__)
@@ -40,14 +43,16 @@ constexpr std::string_view GetLevelStr(LogLevel level) {
 }
 
 template <typename... Args>
-void LogInfo(LogLevel level, std::string_view fmt_str, Args&&... args) {
+void LogInfo(LogLevel level, std::string_view fmt_str,
+			 std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
 	try {
 		if (level < kLogLevel) return;
 		std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
-		std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n", now,
-								 GetLevelStr(level), GetCurrentThreadId(), msg);
+		std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
+								 GetLevelStr(level), GetCurrentThreadId(), msg,
+								 location.file_name(), location.line());
 	} catch (const std::format_error& e) {
 		std::cerr << std::format(
 			"[{:%F %T}][{}][Thread:{}] Log formatting error:{}\n", now,
