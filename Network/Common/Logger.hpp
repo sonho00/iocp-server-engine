@@ -46,41 +46,28 @@ template <typename... Args>
 void LogInfo(LogLevel level, std::string_view fmt_str,
 			 std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
-	try {
-		if (level < kLogLevel) return;
-		std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
+	if (level < kLogLevel) return;
+	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
-		std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
-								 GetLevelStr(level), GetCurrentThreadId(), msg,
-								 location.file_name(), location.line());
-	} catch (const std::format_error& e) {
-		std::cerr << std::format(
-			"[{:%F %T}][{}][Thread:{}] Log formatting error:{}\n", now,
-			GetLevelStr(level), GetCurrentThreadId(), e.what());
-	}
+	std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
+							 GetLevelStr(level), GetCurrentThreadId(), msg,
+							 location.file_name(), location.line());
 }
 
 template <typename... Args>
 void LogError(LogLevel level, std::string_view fmt_str,
 			  std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
-	try {
-		if (level < kLogLevel) return;
-		std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
+	if (level < kLogLevel) return;
+	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
-		std::cerr << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
-								 GetLevelStr(level), GetCurrentThreadId(), msg,
-								 location.file_name(), location.line());
-		if (level == LogLevel::kFatal) {
-			std::cout.flush();
-			std::cerr.flush();
-			throw std::runtime_error(msg);
-		}
-	} catch (const std::format_error& e) {
-		std::cerr << std::format(
-			"[{:%F %T}][{}][Thread:{}] Log formatting error:{}\n{}:{}\n", now,
-			GetLevelStr(level), GetCurrentThreadId(), e.what(),
-			location.file_name(), location.line());
+	std::cerr << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
+							 GetLevelStr(level), GetCurrentThreadId(), msg,
+							 location.file_name(), location.line());
+	if (level == LogLevel::kFatal) {
+		std::cout.flush();
+		std::cerr.flush();
+		throw std::runtime_error(msg);
 	}
 }
 }  // namespace NetUtils
