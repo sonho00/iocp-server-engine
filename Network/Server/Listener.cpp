@@ -78,13 +78,11 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 		return false;
 	}
 
-	if (!session->RegisterRead()) {
-		LOG_ERROR("[Session:{}] Failed to post initial read",
-				  session->GetHandle());
+	if (!session->Connect()) {
+		LOG_WARN("[Session:{}] Failed to complete connection setup",
+				 session->GetHandle());
 		return false;
 	}
-
-	sessionManager_.ConnectSession(session->GetHandle());
 
 	return true;
 }
@@ -109,7 +107,7 @@ bool Listener::PostAccept() {
 		if (!RegisterAccept(sessionPtr)) {
 			pendingAccepts_--;
 			LOG_ERROR("[Session:{}] Failed to post AcceptEx",
-					  sessionPtr.GetHandle());
+					  sessionPtr->GetHandle());
 			sessionPtr->Disconnect();
 			return false;
 		}
@@ -135,15 +133,17 @@ bool Listener::RegisterAccept(SharedPoolPtr<Session>& sessionPtr) {
 							  Config::kAcceptAddrSize, Config::kAcceptAddrSize,
 							  &bytesReceived, &sessionPtr->readOv_.overlapped_);
 
-	if (result == 0) {
+	if (result == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
-		if (errorCode != ERROR_IO_PENDING) {
-			LOG_ERROR("[Session:{}] AcceptEx failed: {}",
-					  sessionPtr->GetHandle(), errorCode);
-			return false;
+		if (errorCode == WSA_IO_PENDING) return true;
+		switch (errorCode) {
+			default:
+				LOG_ERROR("[Session:{}][Error:{}] AcceptEx failed",
+						  sessionPtr->GetHandle(), errorCode);
+				break;
 		}
+		return false;
 	}
-
 	return true;
 }
 
