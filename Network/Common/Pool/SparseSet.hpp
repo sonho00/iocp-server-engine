@@ -3,7 +3,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
 #include <numeric>
 #include <vector>
 
@@ -28,6 +27,8 @@ class SparseSet {
 	bool Push(uint64_t handle);
 
 	bool MoveToState(uint64_t handle, size_t newState);
+	bool IncrementState(uint64_t handle);
+	bool DecrementState(uint64_t handle);
 	[[nodiscard]] std::vector<uint64_t> GetIndicesInState(
 		size_t state = stateCount - 1);
 
@@ -36,10 +37,6 @@ class SparseSet {
 	[[nodiscard]] size_t GetState(uint64_t handle) const;
 
    private:
-	bool MoveToStateInternal(uint64_t handle, size_t newState);
-	bool IncrementStateInternal(uint64_t handle);
-	bool DecrementStateInternal(uint64_t handle);
-
 	static constexpr uint8_t kIndexShift = 32;
 
 	std::array<Slot, N> sparse_;
@@ -47,7 +44,6 @@ class SparseSet {
 	// dense_[cursor_[state]]부터 dense_[cursor_[state + 1] - 1]까지
 	// state에 있는 핸들들의 인덱스
 	std::array<uint32_t, stateCount + 1> cursor_;
-	std::mutex mutex_;
 };
 
 template <size_t N, size_t stateCount>
@@ -66,16 +62,14 @@ uint64_t SparseSet<N, stateCount>::Pop(size_t state) {
 		LOG_ERROR("Invalid state: {}, stateCount: {}", state, stateCount);
 		return kInvalidHandle;
 	}
-	uint64_t handle;
-	{
-		std::lock_guard lock(mutex_);
-		if (cursor_[state] == cursor_[state + 1]) {
-			LOG_WARN("No available handles.");
-			return kInvalidHandle;
-		}
-
-		handle = GetHandle(dense_[cursor_[state]]);
+	if (cursor_[0] == cursor_[1]) {
+		LOG_WARN("No available handle");
+		return kInvalidHandle;
 	}
+
+	uint64_t handle = GetHandle(dense_[cursor_[0]]);
+	MoveToState(handle, state);
+	
 	return handle;
 }
 
@@ -84,10 +78,7 @@ bool SparseSet<N, stateCount>::Push(uint64_t handle) {
 	if (!IsValid(handle)) return false;
 
 	auto who = static_cast<uint32_t>(handle);
-	{
-		std::lock_guard lock(mutex_);
-		MoveToStateInternal(handle, 0);
-	}
+	MoveToState(handle, 0);
 	sparse_[who].generation_++;
 
 	return true;
@@ -102,80 +93,22 @@ bool SparseSet<N, stateCount>::MoveToState(uint64_t handle, size_t newState) {
 	}
 	if (!IsValid(handle)) return false;
 
-	std::lock_guard lock(mutex_);
-	return MoveToStateInternal(handle, newState);
-}
-
-template <size_t N, size_t stateCount>
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-bool SparseSet<N, stateCount>::MoveToStateInternal(uint64_t handle,
-												   size_t newState) {
 	auto who = static_cast<uint32_t>(handle);
 	while (sparse_[who].state_ < newState) {
-		if (!IncrementStateInternal(handle)) return false;
+		if (!IncrementState(handle)) return false;
 	}
 	while (sparse_[who].state_ > newState) {
-		if (!DecrementStateInternal(handle)) return false;
+		if (!DecrementState(handle)) return false;
 	}
 
 	return true;
 }
-
 template <size_t N, size_t stateCount>
-std::vector<uint64_t> SparseSet<N, stateCount>::GetIndicesInState(
-	size_t state) {
-	std::vector<uint64_t> result;
-	if (state >= stateCount) {
-		LOG_ERROR("Invalid state: {}, stateCount: {}", state, stateCount);
-		return result;
-	}
-
-	{
-		std::lock_guard lock(mutex_);
-		// cursor_[state]부터 cursor_[state + 1]까지가 state에 있는 핸들
-		result.reserve(cursor_[state + 1] - cursor_[state]);
-		for (size_t i = cursor_[state]; i < cursor_[state + 1]; ++i) {
-			result.push_back(GetHandle(dense_[i]));
-		}
-	}
-	return result;
-}
-
-template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::IsValid(uint64_t handle) const {
-	auto who = static_cast<uint32_t>(handle);
-	auto generation = static_cast<uint32_t>(handle >> kIndexShift);
-
-	bool valid = who < N && sparse_[who].generation_ == generation;
-	if (!valid) {
-		LOG_WARN("Invalid handle: {}", handle);
-	}
-	return valid;
-}
-
-template <size_t N, size_t stateCount>
-uint64_t SparseSet<N, stateCount>::GetHandle(uint32_t who) const {
-	// 상위 32비트는 generation, 하위 32비트는 who
-	return (static_cast<uint64_t>(sparse_[who].generation_) << kIndexShift) |
-		   who;
-}
-
-template <size_t N, size_t stateCount>
-size_t SparseSet<N, stateCount>::GetState(uint64_t handle) const {
-	if (!IsValid(handle)) {
-		LOG_ERROR("Invalid handle: {}", handle);
-		return static_cast<size_t>(-1);
-	}
-	auto who = static_cast<uint32_t>(handle);
-	return sparse_[who].state_;
-}
-
-template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::IncrementStateInternal(uint64_t handle) {
+bool SparseSet<N, stateCount>::IncrementState(uint64_t handle) {
 	auto who = static_cast<uint32_t>(handle);
 	size_t currentState = sparse_[who].state_;
 	if (currentState >= stateCount - 1) {
-		LOG_ERROR("Cannot increment state: {}", handle);
+		LOG_ERROR("[Session:{}] Cannot increment state", handle);
 		return false;
 	}
 
@@ -194,11 +127,11 @@ bool SparseSet<N, stateCount>::IncrementStateInternal(uint64_t handle) {
 }
 
 template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::DecrementStateInternal(uint64_t handle) {
+bool SparseSet<N, stateCount>::DecrementState(uint64_t handle) {
 	auto who = static_cast<uint32_t>(handle);
 	size_t currentState = sparse_[who].state_;
 	if (currentState == 0) {
-		LOG_ERROR("Cannot decrement state: {}", handle);
+		LOG_ERROR("[Session:{}] Cannot decrement state", handle);
 		return false;
 	}
 
@@ -214,4 +147,49 @@ bool SparseSet<N, stateCount>::DecrementStateInternal(uint64_t handle) {
 	sparse_[who].state_ = prevState;
 
 	return true;
+}
+
+template <size_t N, size_t stateCount>
+std::vector<uint64_t> SparseSet<N, stateCount>::GetIndicesInState(
+	size_t state) {
+	std::vector<uint64_t> result;
+	if (state >= stateCount) {
+		LOG_ERROR("Invalid state: {}, stateCount: {}", state, stateCount);
+		return result;
+	}
+
+	// cursor_[state]부터 cursor_[state + 1]까지가 state에 있는 핸들
+	result.reserve(cursor_[state + 1] - cursor_[state]);
+	for (size_t i = cursor_[state]; i < cursor_[state + 1]; ++i) {
+		result.push_back(GetHandle(dense_[i]));
+	}
+
+	return result;
+}
+
+template <size_t N, size_t stateCount>
+bool SparseSet<N, stateCount>::IsValid(uint64_t handle) const {
+	auto who = static_cast<uint32_t>(handle);
+	auto generation = static_cast<uint32_t>(handle >> kIndexShift);
+
+	bool valid = who < N && sparse_[who].generation_ == generation;
+	if (!valid) {
+		LOG_WARN("[Session:{}] Invalid handle detected", handle);
+	}
+	return valid;
+}
+
+template <size_t N, size_t stateCount>
+uint64_t SparseSet<N, stateCount>::GetHandle(uint32_t who) const {
+	// 상위 32비트는 generation, 하위 32비트는 who
+	return (static_cast<uint64_t>(sparse_[who].generation_) << kIndexShift) |
+		   who;
+}
+
+template <size_t N, size_t stateCount>
+size_t SparseSet<N, stateCount>::GetState(uint64_t handle) const {
+	if (!IsValid(handle)) return static_cast<size_t>(-1);
+
+	auto who = static_cast<uint32_t>(handle);
+	return sparse_[who].state_;
 }
