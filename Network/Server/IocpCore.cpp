@@ -2,7 +2,6 @@
 #include "IocpCore.hpp"
 
 #include <WinSock2.h>
-#include <winnt.h>
 
 #include <thread>
 
@@ -92,17 +91,18 @@ void IocpCore::Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred) {
 		case IO_TYPE::kAccept: {
 			if (sessionPtr->GetListener()->HandleAccept(sessionPtr)) {
 				LOG_INFO("[Session:{}] Accept completed",
-						  sessionPtr->GetHandle());
+						 sessionPtr->GetHandle());
 			} else {
 				LOG_WARN("[Session:{}] Failed to handle accept",
 						 sessionPtr->GetHandle());
+				sessionPtr->Disconnect();
 			}
 			break;
 		}
 		case IO_TYPE::kDisconnect: {
 			LOG_INFO("[Session:{}] Disconnect completed",
 					 sessionPtr->GetHandle());
-			sessionPtr->disconnectOv_.Reset();
+			sessionPtr->Clear();
 			break;
 		}
 		case IO_TYPE::kRecv:

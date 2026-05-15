@@ -23,6 +23,7 @@ class IocpCore {
 	void WorkerThread();
 
 	static void HandleError(OverlappedEx& overlappedEx, int errorCode);
+	static void Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred);
 
 	std::vector<std::thread> threads_;
 	HANDLE hIocp_;
