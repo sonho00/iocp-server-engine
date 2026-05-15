@@ -34,15 +34,13 @@ bool SessionManager::Init(IocpCore& iocpCore, Listener& listener) {
 
 SharedPoolPtr<Session> SessionManager::CreateSession() {
 	SharedPoolPtr<Session> sessionPtr =
-		sessionPool_.Acquire(static_cast<size_t>(SessionState::kIdle));
+		sessionPool_.Acquire(static_cast<size_t>(SessionState::kPending));
 	if (!sessionPtr.IsValid()) {
 		LOG_WARN("Failed to acquire session from pool");
 		return nullptr;
 	}
 
 	uint64_t handle = sessionPtr.GetHandle();
-	sessionPool_.MoveToState(handle,
-							 static_cast<size_t>(SessionState::kPending));
 	sessionPtr->sessionManager_ = this;
 	sessionPtr->handle_ = handle;
 	auto idx = static_cast<uint32_t>(handle);
@@ -56,6 +54,10 @@ bool SessionManager::ConnectSession(uint64_t handle) {
 }
 
 void SessionManager::DisconnectSession(uint64_t handle) {
+	if (!sessionPool_.IsValid(handle)) {
+		LOG_ERROR("Invalid session handle: {}", handle);
+		return;
+	}
 	auto idx = static_cast<uint32_t>(handle);
 	sessionPtrs_[idx].Reset();
 }
