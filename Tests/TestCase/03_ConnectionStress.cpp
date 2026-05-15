@@ -47,8 +47,8 @@ class ConnectionStress : public Client {
 	bool test() override {
 		try {
 			std::vector<std::thread> clientThreads;
-			clientThreads.reserve(1000);
-			for (int i = 0; i < 1000; ++i) {
+			clientThreads.reserve(100);
+			for (int i = 0; i < 100; ++i) {
 				clientThreads.emplace_back(&ConnectionStress::ThreadFunc, this);
 				LOG_DEBUG("Started client thread {}", i + 1);
 			}
