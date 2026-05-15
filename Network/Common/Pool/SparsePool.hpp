@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <mutex>
+#include <utility>
 
 #include "ISparsePool.hpp"
 #include "ObjectPool.hpp"
@@ -14,6 +15,7 @@ template <typename T, size_t N, size_t StateCount = 2, bool isLazy = false>
 class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 	using Slot = ISparsePool<T>::Slot;
 	using DeleteFunc = std::function<void(T*)>;
+	using PostReleaseFunc = std::function<void()>;
 
    public:
 	SparsePool(DeleteFunc deleter = nullptr)
@@ -31,8 +33,13 @@ class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 
 	[[nodiscard]] T* GetObj(uint64_t handle) override;
 
+	void SetPostReleaseFunc(PostReleaseFunc func) {
+		postReleaseFunc_ = std::move(func);
+	}
+
    private:
 	ObjectPool<Slot, N, isLazy> pool_;
+	PostReleaseFunc postReleaseFunc_;
 	std::mutex mutex_;
 };
 
@@ -72,11 +79,13 @@ bool SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
 	if (slot->refCount_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-		SparseSet<N, StateCount>::Push(handle);
 		pool_.Release(idx);
 		{
 			std::lock_guard lock(mutex_);
 			SparseSet<N, StateCount>::Push(handle);
+		}
+		if (postReleaseFunc_) {
+			postReleaseFunc_();
 		}
 		return true;
 	}
