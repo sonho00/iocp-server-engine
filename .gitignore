@@ -11,7 +11,8 @@
 # IDE (VS Code, Visual Studio)
 .vs/
 .vscode/
+.cache/
+.github/
 bin/
 obj/
 build/
-.cache/
