@@ -2,9 +2,6 @@
 
 #include <WinSock2.h>
 
-#include <array>
-#include <cstddef>
-#include <functional>
 #include <mutex>
 
 #include "Network/Common/Pool/SparseSet.hpp"
@@ -33,7 +30,9 @@ class Session {
 
 	bool HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred);
 
+	bool Connect();
 	bool Disconnect();
+	bool Clear();
 
 	[[nodiscard]] uint64_t GetHandle() const { return handle_; }
 	[[nodiscard]] SOCKET GetSocket() const { return socket_; }
@@ -50,8 +49,6 @@ class Session {
 	bool OnRead(DWORD bytesTransferred);
 	bool OnWrite(DWORD bytesTransferred);
 
-	bool Clear();
-
 	Listener* listener_ = nullptr;
 	SessionManager* sessionManager_ = nullptr;
 
@@ -59,5 +56,6 @@ class Session {
 	uint64_t handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
 	bool isSending_ = false;
 
-	std::mutex mtx_;
+	std::mutex writeMtx_;
+	std::mutex connectMtx_;
 };

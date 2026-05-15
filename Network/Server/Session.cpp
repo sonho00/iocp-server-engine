@@ -6,7 +6,6 @@
 #include <mutex>
 
 #include "Network/Common/Logger.hpp"
-#include "Network/Common/Pool/ISparsePool.hpp"
 #include "Network/Common/Protocol.hpp"
 #include "OverlappedEx.hpp"
 #include "PacketHandler.hpp"
@@ -190,6 +189,30 @@ bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
 			LOG_ERROR("[Session:{}] Unknown IO type", handle_);
 			return false;
 	}
+}
+
+bool Session::Connect() {
+	{
+		std::lock_guard<std::mutex> lock(connectMtx_);
+		if (sessionManager_->GetState(handle_) != SessionState::kPending) {
+			LOG_ERROR("[Session:{}] Invalid state for Connect: {}", handle_,
+					  static_cast<uint8_t>(sessionManager_->GetState(handle_)));
+			return false;
+		}
+
+		if (!sessionManager_->ConnectSession(handle_)) {
+			LOG_ERROR("[Session:{}] Failed to transition to Connected state",
+					  handle_);
+			return false;
+		}
+	}
+
+	if (!RegisterRead()) {
+		LOG_WARN("[Session:{}] Failed to post initial read", handle_);
+		return false;
+	}
+
+	return true;
 }
 
 bool Session::Disconnect() {
