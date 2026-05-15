@@ -15,7 +15,7 @@ class SessionManager {
    public:
 	SessionManager();
 
-	bool Init(IocpCore& iocpCore);
+	bool Init(IocpCore& iocpCore, Listener& listener);
 
 	SharedPoolPtr<Session> CreateSession();
 	bool ConnectSession(uint64_t handle);

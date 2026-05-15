@@ -13,11 +13,12 @@
 
 SessionManager::SessionManager()
 	: sessionPool_([](Session* sessionPtr) {
-		  sessionPtr->Clear();
-		  sessionPtr->listener_->PostAccept();
+		  sessionPtr->handle_ = ISparsePool<Session>::kInvalidHandle;
 	  }) {}
 
-bool SessionManager::Init(IocpCore& iocpCore) {
+bool SessionManager::Init(IocpCore& iocpCore, Listener& listener) {
+	sessionPool_.SetPostReleaseFunc([&listener] { listener.PostAccept(); });
+
 	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
 		static_cast<size_t>(SessionState::kIdle));
 
