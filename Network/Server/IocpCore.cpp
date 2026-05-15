@@ -59,6 +59,31 @@ bool IocpCore::Register(SOCKET socket, ULONG_PTR completionKey) const {
 	}
 	return true;
 }
+
+void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
+	SharedPoolPtr<Session> sessionPtr = overlappedEx.sessionPtr_;
+
+	if (overlappedEx.ioType_ == IO_TYPE::kDisconnect) {
+		LOG_ERROR("[Session:{}][Error:{}] Disconnect operation failed",
+				  sessionPtr->GetHandle(), errorCode);
+		sessionPtr->Clear();
+	} else {
+		overlappedEx.sessionPtr_.Reset();
+		sessionPtr->Disconnect();
+	}
+	switch (errorCode) {
+		case ERROR_NETNAME_DELETED:
+			LOG_INFO("[Session:{}] Connection closed by client",
+					 sessionPtr->GetHandle());
+			break;
+
+		default:
+			LOG_ERROR("[Session:{}][Error:{}] I/O operation failed",
+					  sessionPtr->GetHandle(), errorCode);
+			break;
+	}
+}
+
 void IocpCore::Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred) {
 	SharedPoolPtr<Session> sessionPtr = overlappedEx.sessionPtr_;
 	overlappedEx.sessionPtr_.Reset();
@@ -129,14 +154,14 @@ void IocpCore::WorkerThread() {
 		OverlappedEx* overlappedEx =
 			CONTAINING_RECORD(overlapped, OverlappedEx, overlapped_);
 		SharedPoolPtr<Session> sessionPtr = overlappedEx->sessionPtr_;
+		int errorCode = static_cast<int>(GetLastError());
 
 		if (overlappedEx->ioType_ == IO_TYPE::kAccept) {
 			sessionPtr->GetListener()->DecrementPendingAccepts();
 		}
 
 		if (result == FALSE) {
-			ServerUtils::HandleError(sessionPtr,
-									 static_cast<int>(GetLastError()));
+			HandleError(*overlappedEx, errorCode);
 			continue;
 		}
 
