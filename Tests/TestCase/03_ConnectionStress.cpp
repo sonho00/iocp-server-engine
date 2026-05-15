@@ -10,59 +10,49 @@ class ConnectionStress : public Client {
    public:
 	void ThreadFunc() override {
 		// 1000개의 클라이언트가 접속, 종료
-		try {
-			for (int i = 0; i < 1000; ++i) {
-				ConnectionStress client;
-				for (int j = 0; j < 32; ++j) {
-					client.CreateSocket();
-					client.DefaultSockOpt();
-					client.AdditionalSockOpt();
+		for (int i = 0; i < 1000; ++i) {
+			ConnectionStress client;
+			for (int j = 0; j < 32; ++j) {
+				client.CreateSocket();
+				client.DefaultSockOpt();
+				client.AdditionalSockOpt();
 
-					int result = client.Connect();
-					switch (result) {
-						case 0:
-							break;	// 성공
+				int result = client.Connect();
+				switch (result) {
+					case 0:
+						break;	// 성공
 
-						case WSAECONNREFUSED:
-							LOG_WARN("Connection refused, retrying...");
-							Sleep(1ul << j);
-							continue;
+					case WSAECONNREFUSED:
+						LOG_WARN("Connection refused, retrying...");
+						Sleep(1ul << j);
+						continue;
 
-						default:
-							LOG_ERROR("Failed to connect: {}",
-									  WSAGetLastError());
-							return;
-					}
-
-					if (result == 0) break;
+					default:
+						LOG_ERROR("Failed to connect: {}", WSAGetLastError());
+						return;
 				}
-				LOG_DEBUG("Client {} connected", i + 1);
+
+				if (result == 0) break;
 			}
-		} catch (const std::exception& e) {
-			LOG_ERROR("Exception in client thread: {}", e.what());
-			success_ = false;
+			LOG_DEBUG("Client {} connected", i + 1);
 		}
 	}
 
 	bool test() override {
-		try {
-			std::vector<std::thread> clientThreads;
-			clientThreads.reserve(100);
-			for (int i = 0; i < 100; ++i) {
-				clientThreads.emplace_back(&ConnectionStress::ThreadFunc, this);
-				LOG_DEBUG("Started client thread {}", i + 1);
-			}
-			int cnt = 0;
-			for (auto& thread : clientThreads) {
-				thread.join();
-				++cnt;
-				if (cnt % 100 == 0) LOG_INFO("Joined {} threads", cnt);
-			}
-		} catch (const std::exception& e) {
-			LOG_ERROR("Exception in ConnectionStress test: {}", e.what());
-			success_ = false;
+		std::vector<std::thread> clientThreads;
+		clientThreads.reserve(100);
+		for (int i = 0; i < 100; ++i) {
+			clientThreads.emplace_back(&ConnectionStress::ThreadFunc, this);
+			LOG_DEBUG("Started client thread {}", i + 1);
 		}
-		return success_;
+		int cnt = 0;
+		for (auto& thread : clientThreads) {
+			thread.join();
+			++cnt;
+			if (cnt % 100 == 0) LOG_INFO("Joined {} threads", cnt);
+		}
+		// 테스트 끝날 때까지 서버가 다운되지 않으면 성공
+		return true;
 	}
 
 	void AdditionalSockOpt() override {
