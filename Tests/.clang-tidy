@@ -9,6 +9,7 @@ Checks: >
   performance-*,
   -bugprone-implicit-widening-of-multiplication-result,
   -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
   modernize-use-nullptr,
   modernize-use-override
 

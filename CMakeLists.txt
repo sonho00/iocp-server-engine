@@ -35,6 +35,14 @@ add_executable(server ${SERVER_ONLY_SRC} ${COMMON_SRC})
 add_executable(client ${CLIENT_ONLY_SRC} ${COMMON_SRC})
 add_executable(tests ${TEST_SRC} ${COMMON_SRC})
 
+if(MSVC)
+    # /wd4189: 지역 변수가 초기화되었으나 참조되지 않음 경고 끄기
+    target_compile_options(tests PRIVATE /wd4189)
+else()
+    # GCC/Clang에서 안 쓰는 변수 경고 끄기
+    target_compile_options(tests PRIVATE -Wno-unused-variable)
+endif()
+
 if(WIN32)
     target_link_libraries(server PRIVATE ws2_32)
     target_link_libraries(client PRIVATE ws2_32)
