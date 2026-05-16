@@ -9,7 +9,12 @@ class Client {
    public:
 	~Client();
 
+	int Init();
+
 	void CreateSocket();
+	void DefaultSockOpt();
+	virtual void AdditionalSockOpt() {}
+	virtual int Connect();
 
 	[[nodiscard]] bool SendPacket(const PACKET_HEADER& header) const;
 	[[nodiscard]] PACKET_HEADER* ReceivePacket(char* buffer);
@@ -21,10 +26,6 @@ class Client {
 
 	virtual void ThreadFunc() = 0;
 	virtual bool test() = 0;
-
-	void DefaultSockOpt();
-	virtual void AdditionalSockOpt() {}
-	virtual int Connect();
 
 	bool success_ = true;
 
