@@ -119,6 +119,24 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 
 <br>
 
+#### To-do List
+
+(1) 패킷 조립, 버퍼 오버플로우 처리, `race condition` 제거 등 현재까지의 구현이 정확한지 검증.
+
+(2) 에코 서버를 넘어 실제 서버다운 기능을 추가.
+
+Broadcast 시스템 구축
+
+Global Broadcast: 전체 세션 리스트를 순회하며 메시지를 전파하는 기본 기능 구현.
+
+`AOI(Area of Interest) Broadcast`: 격자 혹은 `Quad-tree` 자료구조를 도입하여 주변 클라이언트에게만 패킷을 전파하는 최적화.
+
+(3) `Zero-byte Receive`: 대량의 세션 대기 시 `Non-paged pool` 메모리 사용량을 최소화하는 최적화 기법 적용.
+
+(4) `DisconnectEx`: 세션 종료 및 소켓 자원 회수를 비동기화하여 안정성 강화.
+
+(5) Engine Integration: 구현된 Task Scheduler와 IOCP 네트워크 레이어를 결합하여 완전한 비동기 서버 엔진으로 통합.
+
 ### 3. Major Troubleshooting
 
 학습 과정 중 발생한 고난도 버그와 그 해결 과정을 기록합니다.
