@@ -16,7 +16,7 @@ bool HandleC2S_MOVE(SessionManager& sessionManager, Session& session,
 	S2C_MOVE movePacket{};
 	movePacket.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kMove);
 	movePacket.header.size = sizeof(S2C_MOVE);
-	movePacket.sessionId = session.GetHandle();
+	movePacket.sessionHandle = session.GetHandle();
 	movePacket.x = moveData->x;
 	movePacket.y = moveData->y;
 
@@ -38,8 +38,8 @@ bool HandleC2S_CHAT(SessionManager& sessionManager, Session& session,
 	std::vector<char> data(header.size + sizeof(session.GetHandle()));
 	auto* chatPacket = reinterpret_cast<S2C_CHAT*>(data.data());
 	chatPacket->header.id = static_cast<uint16_t>(S2C_PACKET_ID::kChat);
-	chatPacket->header.size = header.size + sizeof(chatPacket->sessionId);
-	chatPacket->sessionId = session.GetHandle();
+	chatPacket->header.size = header.size + sizeof(chatPacket->sessionHandle);
+	chatPacket->sessionHandle = session.GetHandle();
 	std::memcpy(chatPacket->message,
 				reinterpret_cast<const char*>(&header) + sizeof(PACKET_HEADER),
 				header.size - sizeof(PACKET_HEADER));
