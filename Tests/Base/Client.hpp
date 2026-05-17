@@ -24,14 +24,12 @@ class Client {
 
 	static bool HandlePacket(const PACKET_HEADER& header);
 
-	bool success_ = true;
-
 	static constexpr const char* kIpAddr_ = "127.0.0.1";
 	static constexpr uint16_t kPort_ = 12345;
 
+	bool success_ = true;
+	SOCKET socket_;
+
    private:
 	WSAManager wsaManager_;
-
-   protected:
-	SOCKET socket_;
 };
