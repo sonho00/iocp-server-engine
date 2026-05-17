@@ -81,9 +81,11 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 
 (1) `Single-threaded`: 1:1 통신의 기초. 클라이언트가 보낸 정보를 그대로 보냄. 블로킹 소켓의 사용으로 다중 접속 불가 확인.
 (2) `Multi-threaded`: 클라이언트당 스레드 할당. 접속자 증가 시 컨텍스트 스위칭 오버헤드 발생.
+
 (3) `IOCP Core`: `Overlapped I/O`와 `Completion Key`를 사용하여 비동기 입출력 구현.
 (4) `AcceptEx`: 소켓 수락 과정도 비동기화하여 대량 접속 요청 시의 지연 시간 최적화.
 (5) `DisconnectEx`: 세션 종료 시 소켓 자원 회수를 비동기화하여 안정성 강화.
+(6) `Broadcast`: 패킷을 전체 세션에 전파하는 기능 구현.
 
 <br>
 
@@ -96,6 +98,7 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 | `Fragmentation` | 클라이언트에서 분할 송신된 메시지가 서버 측에서 올바르게 조립되는지 확인 | **Pass** |
 | `Sticky Packets` | 다수의 패킷이 하나의 수신 버퍼에 병합되어 전달될 때, 서버가 이를 정확히 분리하여 처리하는지 검증 | **Pass** |
 | `Connection Stress` | 대량의 클라이언트가 재접속과 끊김을 반복하는 상황에서 서버의 안정성 및 자원 관리 능력 테스트 | **Pass** |
+| `Broadcast` | 서버에서 다수의 클라이언트에게 패킷을 전파할 때, 모든 클라이언트가 정확히 수신하는지 확인 | **Pass** |
 
 <br>
 
@@ -121,21 +124,9 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 
 #### To-do List
 
-(1) 패킷 조립, 버퍼 오버플로우 처리, `race condition` 제거 등 현재까지의 구현이 정확한지 검증.
+(1) `AOI(Area of Interest) Broadcast`: 격자 혹은 `Quad-tree` 자료구조를 도입하여 주변 클라이언트에게만 패킷을 전파하는 최적화.
 
-(2) 에코 서버를 넘어 실제 서버다운 기능을 추가.
-
-Broadcast 시스템 구축
-
-Global Broadcast: 전체 세션 리스트를 순회하며 메시지를 전파하는 기본 기능 구현.
-
-`AOI(Area of Interest) Broadcast`: 격자 혹은 `Quad-tree` 자료구조를 도입하여 주변 클라이언트에게만 패킷을 전파하는 최적화.
-
-(3) `Zero-byte Receive`: 대량의 세션 대기 시 `Non-paged pool` 메모리 사용량을 최소화하는 최적화 기법 적용.
-
-(4) `DisconnectEx`: 세션 종료 및 소켓 자원 회수를 비동기화하여 안정성 강화.
-
-(5) Engine Integration: 구현된 Task Scheduler와 IOCP 네트워크 레이어를 결합하여 완전한 비동기 서버 엔진으로 통합.
+(2) Engine Integration: 구현된 Task Scheduler와 IOCP 네트워크 레이어를 결합하여 완전한 비동기 서버 엔진으로 통합.
 
 ### 3. Major Troubleshooting
 
