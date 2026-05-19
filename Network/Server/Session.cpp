@@ -2,6 +2,7 @@
 
 #include <WinSock2.h>
 
+#include <cassert>
 #include <cstring>
 #include <mutex>
 
@@ -57,61 +58,6 @@ bool Session::RegisterRead() {
 	return true;
 }
 
-bool Session::RegisterWrite() {
-	// 이 함수는 mtx 락을 획득한 상태이고 isSending_가 true인 상태에서만
-	// 호출되어야 합니다.
-	writeOv_.ioType_ = IO_TYPE::kSend;
-	writeOv_.wsaBuf_.buf = writeOv_.buffer_.GetBuffer() + writeOv_.readPos_;
-	writeOv_.wsaBuf_.len = writeOv_.writePos_ - writeOv_.readPos_;
-	ZeroMemory(&writeOv_.overlapped_, sizeof(OVERLAPPED));
-	writeOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
-
-	DWORD flags = 0;
-	int result = WSASend(socket_, &writeOv_.wsaBuf_, 1, nullptr, flags,
-						 &writeOv_.overlapped_, nullptr);
-
-	if (result == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode == WSA_IO_PENDING) return true;
-		writeOv_.sessionPtr_.Reset();
-		switch (errorCode) {
-			case WSAECONNRESET:
-				LOG_INFO("[Session:{}] Connection closed by client", handle_);
-				return false;
-
-			default:
-				LOG_ERROR("[Session:{}][Error:{}] Failed to post write",
-						  handle_, errorCode);
-				return false;
-		}
-	}
-	return true;
-}
-
-bool Session::SendPacket(const PACKET_HEADER& header) {
-	std::lock_guard<std::mutex> lock(writeMtx_);
-	if (writeOv_.writePos_ - writeOv_.readPos_ + header.size >
-		writeOv_.buffer_.GetSize()) {
-		LOG_WARN("[Session:{}] Write buffer overflow detected", handle_);
-		return false;
-	}
-
-	memcpy(writeOv_.buffer_.GetBuffer() + writeOv_.writePos_, &header,
-		   header.size);
-	writeOv_.writePos_ += header.size;
-
-	if (!isSending_) {
-		isSending_ = true;
-
-		if (!RegisterWrite()) {
-			LOG_ERROR("[Session:{}] Failed to post another write", handle_);
-			return false;
-		}
-	}
-
-	return true;
-}
-
 bool Session::OnRead(DWORD bytesTransferred) {
 	readOv_.writePos_ += bytesTransferred;
 
@@ -156,9 +102,41 @@ bool Session::OnRead(DWORD bytesTransferred) {
 	return true;
 }
 
+bool Session::RegisterWriteInternal() {
+	assert(isSending_);
+
+	writeOv_.ioType_ = IO_TYPE::kSend;
+	writeOv_.wsaBuf_.buf = writeOv_.buffer_.GetBuffer() + writeOv_.readPos_;
+	writeOv_.wsaBuf_.len = writeOv_.writePos_ - writeOv_.readPos_;
+	ZeroMemory(&writeOv_.overlapped_, sizeof(OVERLAPPED));
+	writeOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
+
+	DWORD flags = 0;
+	int result = WSASend(socket_, &writeOv_.wsaBuf_, 1, nullptr, flags,
+						 &writeOv_.overlapped_, nullptr);
+
+	if (result == SOCKET_ERROR) {
+		int errorCode = WSAGetLastError();
+		if (errorCode == WSA_IO_PENDING) return true;
+		writeOv_.sessionPtr_.Reset();
+		switch (errorCode) {
+			case WSAECONNRESET:
+				LOG_INFO("[Session:{}] Connection closed by client", handle_);
+				return false;
+
+			default:
+				LOG_ERROR("[Session:{}][Error:{}] Failed to post write",
+						  handle_, errorCode);
+				return false;
+		}
+	}
+	return true;
+}
+
 bool Session::OnWrite(DWORD bytesTransferred) {
-	// 이 함수가 호출될 때는 is sending_가 true인 상태입니다.
 	std::lock_guard<std::mutex> lock(writeMtx_);
+	assert(isSending_);
+
 	writeOv_.readPos_ += bytesTransferred;
 
 	if (writeOv_.readPos_ >= writeOv_.buffer_.GetSize()) {
@@ -171,9 +149,33 @@ bool Session::OnWrite(DWORD bytesTransferred) {
 		return true;
 	}
 
-	if (!RegisterWrite()) {
+	if (!RegisterWriteInternal()) {
 		LOG_ERROR("[Session:{}] Failed to post another write", handle_);
 		return false;
+	}
+
+	return true;
+}
+
+bool Session::SendPacket(const PACKET_HEADER& header) {
+	std::lock_guard<std::mutex> lock(writeMtx_);
+	if (writeOv_.writePos_ - writeOv_.readPos_ + header.size >
+		writeOv_.buffer_.GetSize()) {
+		LOG_WARN("[Session:{}] Write buffer overflow detected", handle_);
+		return false;
+	}
+
+	memcpy(writeOv_.buffer_.GetBuffer() + writeOv_.writePos_, &header,
+		   header.size);
+	writeOv_.writePos_ += header.size;
+
+	if (!isSending_) {
+		isSending_ = true;
+
+		if (!RegisterWriteInternal()) {
+			LOG_ERROR("[Session:{}] Failed to post another write", handle_);
+			return false;
+		}
 	}
 
 	return true;
@@ -278,7 +280,6 @@ bool Session::Disconnect() {
 }
 
 bool Session::Clear() {
-	isSending_ = false;
 	sessionManager_->DisconnectSession(handle_);
 	return true;
 }
