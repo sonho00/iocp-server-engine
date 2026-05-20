@@ -14,8 +14,6 @@ class Listener;
 
 class SessionManager {
    public:
-	SessionManager();
-
 	bool Init(IocpCore& iocpCore, Listener& listener);
 	bool RegisterSession(uint64_t handle);
 
