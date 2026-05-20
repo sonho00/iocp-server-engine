@@ -77,6 +77,15 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 					 sessionPtr->GetHandle());
 			break;
 
+		case ERROR_OPERATION_ABORTED:
+			if (isShuttingDown_) {
+				LOG_INFO("Server is shutting down. Operation aborted.");
+			} else {
+				LOG_WARN("[Session:{}][Error:{}] Operation aborted",
+						 sessionPtr->GetHandle(), errorCode);
+			}
+			break;
+
 		default:
 			LOG_ERROR("[Session:{}][Error:{}] I/O operation failed",
 					  sessionPtr->GetHandle(), errorCode);
