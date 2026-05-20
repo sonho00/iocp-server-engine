@@ -28,4 +28,5 @@ class IocpCore {
 	std::vector<std::thread> threads_;
 	HANDLE hIocp_;
 	Listener* listener_ = nullptr;
+	std::atomic<bool> isShuttingDown_ = false;
 };

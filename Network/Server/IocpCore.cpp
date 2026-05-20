@@ -20,6 +20,7 @@ IocpCore::IocpCore() {
 }
 
 IocpCore::~IocpCore() {
+	isShuttingDown_ = true;
 	for (auto& _ : threads_) {
 		PostQueuedCompletionStatus(hIocp_, 0, 0, nullptr);
 	}
@@ -144,7 +145,7 @@ void IocpCore::WorkerThread() {
 			hIocp_, &bytesTransferred, &completionKey, &overlapped, INFINITE);
 
 		if (overlapped == nullptr) {
-			if (result == TRUE) {
+			if (isShuttingDown_) {
 				LOG_INFO("Server is shutting down.");
 				break;
 			}
