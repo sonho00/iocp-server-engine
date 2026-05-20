@@ -60,6 +60,45 @@ bool IocpCore::Register(SOCKET socket, ULONG_PTR completionKey) const {
 	return true;
 }
 
+void IocpCore::WorkerThread() {
+	while (true) {
+		DWORD bytesTransferred = 0;
+		ULONG_PTR completionKey = 0;
+		OVERLAPPED* overlapped = nullptr;
+
+		BOOL result = GetQueuedCompletionStatus(
+			hIocp_, &bytesTransferred, &completionKey, &overlapped, INFINITE);
+
+		if (overlapped == nullptr) {
+			if (isShuttingDown_) {
+				LOG_INFO("Server is shutting down.");
+				break;
+			}
+			LOG_FATAL("[Error:{}] GQCS failed", GetLastError());
+		}
+
+		OverlappedEx* overlappedEx =
+			CONTAINING_RECORD(overlapped, OverlappedEx, overlapped_);
+		SharedPoolPtr<Session> sessionPtr = overlappedEx->sessionPtr_;
+		int errorCode = static_cast<int>(GetLastError());
+
+		if (overlappedEx->ioType_ == IO_TYPE::kAccept) {
+			sessionPtr->GetListener()->DecrementPendingAccepts();
+		}
+
+		if (result == FALSE) {
+			HandleError(*overlappedEx, errorCode);
+			continue;
+		}
+
+		LOG_DEBUG("[Session:{}] IOType: {} BytesTransferred: {}",
+				  sessionPtr->GetHandle(),
+				  static_cast<int>(overlappedEx->ioType_), bytesTransferred);
+
+		Dispatch(*overlappedEx, bytesTransferred);
+	}
+}
+
 void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 	SharedPoolPtr<Session> sessionPtr = overlappedEx.sessionPtr_;
 
@@ -141,45 +180,6 @@ void IocpCore::Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred) {
 					  static_cast<int>(overlappedEx.ioType_));
 			sessionPtr->Disconnect();
 			return;
-	}
-}
-
-void IocpCore::WorkerThread() {
-	while (true) {
-		DWORD bytesTransferred = 0;
-		ULONG_PTR completionKey = 0;
-		OVERLAPPED* overlapped = nullptr;
-
-		BOOL result = GetQueuedCompletionStatus(
-			hIocp_, &bytesTransferred, &completionKey, &overlapped, INFINITE);
-
-		if (overlapped == nullptr) {
-			if (isShuttingDown_) {
-				LOG_INFO("Server is shutting down.");
-				break;
-			}
-			LOG_FATAL("[Error:{}] GQCS failed", GetLastError());
-		}
-
-		OverlappedEx* overlappedEx =
-			CONTAINING_RECORD(overlapped, OverlappedEx, overlapped_);
-		SharedPoolPtr<Session> sessionPtr = overlappedEx->sessionPtr_;
-		int errorCode = static_cast<int>(GetLastError());
-
-		if (overlappedEx->ioType_ == IO_TYPE::kAccept) {
-			sessionPtr->GetListener()->DecrementPendingAccepts();
-		}
-
-		if (result == FALSE) {
-			HandleError(*overlappedEx, errorCode);
-			continue;
-		}
-
-		LOG_DEBUG("[Session:{}] IOType: {} BytesTransferred: {}",
-				  sessionPtr->GetHandle(),
-				  static_cast<int>(overlappedEx->ioType_), bytesTransferred);
-
-		Dispatch(*overlappedEx, bytesTransferred);
 	}
 }
 // NOLINTEND(performance-no-int-to-ptr)
