@@ -22,6 +22,15 @@ Session::Session()
 	}
 }
 
+void Session::Init() {
+	readOv_.Reset();
+	writeOv_.Reset();
+	disconnectOv_.Reset();
+	listener_ = nullptr;
+	isSending_ = false;
+	handle_ = ISparsePool<Session>::kInvalidHandle;
+}
+
 bool Session::RegisterRead() {
 	readOv_.wsaBuf_.len =
 		readOv_.buffer_.GetSize() - readOv_.writePos_ + readOv_.readPos_;
