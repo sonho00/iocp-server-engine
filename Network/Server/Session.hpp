@@ -55,7 +55,7 @@ class Session {
 	bool OnWrite(DWORD bytesTransferred);
 
 	SOCKET socket_ = INVALID_SOCKET;
-	uint64_t handle_ = SparseSet<Config::kPoolSize>::kInvalidHandle;
+	uint64_t handle_ = SparseSet<Config::kMaxSession>::kInvalidHandle;
 
 	SessionManager* sessionManager_ = nullptr;
 	Listener* listener_ = nullptr;

@@ -29,8 +29,8 @@ class SessionManager {
 
    private:
 	IocpCore* iocpCore_ = nullptr;
-	SparsePool<Session, Config::kPoolSize,
+	SparsePool<Session, Config::kMaxSession,
 			   static_cast<size_t>(SessionState::kCnt)>
 		sessionPool_;
-	std::array<SharedPoolPtr<Session>, Config::kPoolSize> sessionPtrs_;
+	std::array<SharedPoolPtr<Session>, Config::kMaxSession> sessionPtrs_;
 };
