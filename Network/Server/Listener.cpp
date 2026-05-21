@@ -90,7 +90,7 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 bool Listener::PostAccept() {
 	while (true) {
 		size_t current = pendingAccepts_.load();
-		if (current >= Config::kAcceptCount) {
+		if (current >= Config::kMaxAccept) {
 			break;
 		}
 

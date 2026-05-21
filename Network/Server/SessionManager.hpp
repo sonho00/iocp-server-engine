@@ -21,6 +21,7 @@ class SessionManager {
 	bool ConnectSession(uint64_t handle);
 	void DisconnectSession(uint64_t handle);
 
+	bool SendToSession(uint64_t handle, const PACKET_HEADER& header);
 	bool Broadcast(const PACKET_HEADER& header, uint64_t sessionHandle);
 
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
@@ -29,8 +30,8 @@ class SessionManager {
 
    private:
 	IocpCore* iocpCore_ = nullptr;
-	SparsePool<Session, Config::kPoolSize,
+	SparsePool<Session, Config::kMaxSession,
 			   static_cast<size_t>(SessionState::kCnt)>
 		sessionPool_;
-	std::array<SharedPoolPtr<Session>, Config::kPoolSize> sessionPtrs_;
+	std::array<SharedPoolPtr<Session>, Config::kMaxSession> sessionPtrs_;
 };
