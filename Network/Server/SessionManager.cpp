@@ -82,16 +82,10 @@ bool SessionManager::Broadcast(const PACKET_HEADER& header,
 	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
 		static_cast<size_t>(SessionState::kConnected));
 
-	for (uint64_t handle : handles) {
-		if (handle == sessionHandle) {
-			continue;
-		}
-		auto idx = static_cast<uint32_t>(handle);
-		if (sessionPtrs_[idx].IsValid()) {
-			sessionPtrs_[idx]->SendPacket(header);
-		}
-	}
-	return true;
+	return std::ranges::all_of(handles, [this, sessionHandle, &header](uint64_t handle) {
+		if (handle == sessionHandle || !sessionPool_.IsValid(handle)) return true;
+		return SendToSession(handle, header);
+	});
 }
 
 SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {
