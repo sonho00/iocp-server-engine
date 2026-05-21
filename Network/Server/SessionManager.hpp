@@ -21,6 +21,7 @@ class SessionManager {
 	bool ConnectSession(uint64_t handle);
 	void DisconnectSession(uint64_t handle);
 
+	bool SendToSession(uint64_t handle, const PACKET_HEADER& header);
 	bool Broadcast(const PACKET_HEADER& header, uint64_t sessionHandle);
 
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
