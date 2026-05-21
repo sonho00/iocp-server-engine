@@ -25,6 +25,8 @@ class Session {
    public:
 	Session();
 
+	void Init();
+
 	bool RegisterRead();
 	bool SendPacket(const PACKET_HEADER& header);
 

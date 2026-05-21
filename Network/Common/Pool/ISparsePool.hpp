@@ -2,12 +2,25 @@
 
 #include <atomic>
 
+#include "PoolConcepts.hpp"
+
 template <typename T>
 class ISparsePool {
    public:
 	struct Slot {
 		template <typename... Args>
 		Slot(Args&&... args) : obj_(std::forward<Args>(args)...) {}
+
+		template <typename... Args>
+		void Init(Args&&... args) {
+			if constexpr (hasInit<T, Args...>) {
+				obj_.Init(std::forward<Args>(args)...);
+			}
+
+			handle_ = kInvalidHandle;
+			refCount_.store(0, std::memory_order_release);
+		}
+
 		T obj_;
 		uint64_t handle_ = kInvalidHandle;
 		std::atomic<size_t> refCount_{0};

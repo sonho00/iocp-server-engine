@@ -13,6 +13,8 @@ struct OverlappedEx {
 	OverlappedEx(size_t bufferSize = Config::kMagicBufferSize)
 		: buffer_(bufferSize) {}
 
+	void Init() { Reset(); }
+
 	void Reset() {
 		overlapped_ = {};
 		ioType_ = IO_TYPE::kNone;

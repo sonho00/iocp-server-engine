@@ -4,11 +4,7 @@
 #include <cstddef>
 #include <functional>
 
-template <typename T>
-concept hasInit = requires(T obj) { obj.Init(); };
-
-template <typename T>
-concept hasClear = requires(T obj) { obj.Clear(); };
+#include "PoolConcepts.hpp"
 
 template <typename T, size_t N, bool isLazy = false>
 class ObjectPool {
@@ -38,7 +34,7 @@ class ObjectPool {
 
 		if constexpr (isLazy) {
 			new (obj) T(std::forward<Args>(args)...);
-		} else if constexpr (hasInit<T>) {
+		} else if constexpr (hasInit<T, Args...>) {
 			obj->Init(std::forward<Args>(args)...);
 		}
 

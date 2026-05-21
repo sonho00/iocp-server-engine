@@ -11,14 +11,6 @@
 #include "Network/Common/Pool/SparsePool.hpp"
 #include "Session.hpp"
 
-SessionManager::SessionManager()
-	: sessionPool_([](Session* sessionPtr) {
-		  sessionPtr->readOv_.Reset();
-		  sessionPtr->writeOv_.Reset();
-		  sessionPtr->isSending_ = false;
-		  sessionPtr->handle_ = ISparsePool<Session>::kInvalidHandle;
-	  }) {}
-
 bool SessionManager::Init(IocpCore& iocpCore, Listener& listener) {
 	iocpCore_ = &iocpCore;
 	sessionPool_.SetPostReleaseFunc([&listener] { listener.PostAccept(); });
