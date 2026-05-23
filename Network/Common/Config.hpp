@@ -14,4 +14,7 @@ constexpr uint32_t kChatPacketSize = 256;
 
 constexpr uint32_t kMaxAccept = 1000;
 constexpr uint32_t kMaxSession = 4096;
+
+constexpr uint32_t kIdLength = 32;
+constexpr uint32_t kPasswordLength = 32;
 }  // namespace Config

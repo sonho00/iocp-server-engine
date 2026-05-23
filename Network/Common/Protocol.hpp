@@ -12,8 +12,24 @@ enum class IO_TYPE : uint8_t {
 	kDisconnect,
 	kCnt
 };
-enum class C2S_PACKET_ID : uint8_t { kNone, kMove, kChat, kCnt };
-enum class S2C_PACKET_ID : uint8_t { kNone, kMove, kChat, kCnt };
+enum class C2S_PACKET_ID : uint8_t {
+	kNone,
+	kMove,
+	kChat,
+	kRegister,
+	kLogin,
+	kLogout,
+	kCnt
+};
+enum class S2C_PACKET_ID : uint8_t {
+	kNone,
+	kMove,
+	kChat,
+	kRegister,
+	kLogin,
+	kLogout,
+	kCnt
+};
 
 // NOLINTBEGIN(readability-identifier-naming, modernize-avoid-c-arrays)
 #pragma pack(push, 1)
@@ -44,6 +60,18 @@ struct C2S_CHAT {
 struct S2C_CHAT {
 	PACKET_HEADER header;
 	uint64_t sessionHandle;
+	char message[Config::kChatPacketSize];
+};
+
+struct C2S_REGISTER {
+	PACKET_HEADER header;
+	char id[Config::kIdLength];
+	char password[Config::kPasswordLength];
+};
+
+struct S2C_REGISTER {
+	PACKET_HEADER header;
+	bool success;
 	char message[Config::kChatPacketSize];
 };
 

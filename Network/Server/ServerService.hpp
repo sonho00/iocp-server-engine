@@ -2,6 +2,7 @@
 
 #include <thread>
 
+#include "AccountManager.hpp"
 #include "IocpCore.hpp"
 #include "Listener.hpp"
 #include "Network/Common/Logger.hpp"
@@ -15,7 +16,7 @@ class ServerService {
 
 	bool Start() {
 		iocpCore_.SetListener(&listener_);
-		sessionManager_.Init(iocpCore_, listener_);
+		sessionManager_.Init(iocpCore_, listener_, accountManager_);
 
 		size_t numThreads = std::thread::hardware_concurrency();
 		if (!iocpCore_.Start(numThreads)) {
@@ -33,6 +34,7 @@ class ServerService {
    private:
 	WSAManager wsaManager_;
 	ServerUtils::NetFuncs netFuncs_;
+	AccountManager accountManager_;
 	SessionManager sessionManager_;
 	IocpCore iocpCore_;
 	Listener listener_;

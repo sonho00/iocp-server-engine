@@ -20,6 +20,7 @@ struct PacketRegistration {
 
 bool HandleC2S_MOVE(Session& session, const PACKET_HEADER& header);
 bool HandleC2S_CHAT(Session& session, const PACKET_HEADER& header);
+bool HandleC2S_REGISTER(Session& session, const PACKET_HEADER& header);
 bool Execute(Session& session, const PACKET_HEADER& header);
 }  // namespace PacketHandler
 
