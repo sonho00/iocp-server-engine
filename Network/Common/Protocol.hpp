@@ -75,5 +75,27 @@ struct S2C_REGISTER {
 	char message[Config::kChatPacketSize];
 };
 
+struct C2S_LOGIN {
+	PACKET_HEADER header;
+	char id[Config::kIdLength];
+	char password[Config::kPasswordLength];
+};
+
+struct S2C_LOGIN {
+	PACKET_HEADER header;
+	bool success;
+	char message[Config::kChatPacketSize];
+};
+
+struct C2S_LOGOUT {
+	PACKET_HEADER header;
+};
+
+struct S2C_LOGOUT {
+	PACKET_HEADER header;
+	bool success;
+	char message[Config::kChatPacketSize];
+};
+
 #pragma pack(pop)
 // NOLINTEND(readability-identifier-naming, modernize-avoid-c-arrays)
