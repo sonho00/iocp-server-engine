@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "AccountManager.hpp"
 #include "IocpCore.hpp"
 #include "Listener.hpp"
 #include "Network/Common/Logger.hpp"
@@ -11,8 +12,10 @@
 #include "Network/Common/Pool/SparsePool.hpp"
 #include "Session.hpp"
 
-bool SessionManager::Init(IocpCore& iocpCore, Listener& listener) {
+bool SessionManager::Init(IocpCore& iocpCore, Listener& listener,
+						  AccountManager& accountManager) {
 	iocpCore_ = &iocpCore;
+	accountManager_ = &accountManager;
 	sessionPool_.SetPostReleaseFunc([&listener] { listener.PostAccept(); });
 
 	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
@@ -82,10 +85,12 @@ bool SessionManager::Broadcast(const PACKET_HEADER& header,
 	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
 		static_cast<size_t>(SessionState::kConnected));
 
-	return std::ranges::all_of(handles, [this, sessionHandle, &header](uint64_t handle) {
-		if (handle == sessionHandle || !sessionPool_.IsValid(handle)) return true;
-		return SendToSession(handle, header);
-	});
+	return std::ranges::all_of(
+		handles, [this, sessionHandle, &header](uint64_t handle) {
+			if (handle == sessionHandle || !sessionPool_.IsValid(handle))
+				return true;
+			return SendToSession(handle, header);
+		});
 }
 
 SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {

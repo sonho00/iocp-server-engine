@@ -11,10 +11,12 @@
 
 class IocpCore;
 class Listener;
+class AccountManager;
 
 class SessionManager {
    public:
-	bool Init(IocpCore& iocpCore, Listener& listener);
+	bool Init(IocpCore& iocpCore, Listener& listener,
+			  AccountManager& accountManager);
 	bool RegisterSession(uint64_t handle);
 
 	SharedPoolPtr<Session> CreateSession();
@@ -27,6 +29,7 @@ class SessionManager {
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
 	SessionState GetState(uint64_t handle);
 	bool SetState(uint64_t handle, SessionState newState);
+	AccountManager* GetAccountManager() const { return accountManager_; }
 
    private:
 	IocpCore* iocpCore_ = nullptr;
@@ -34,4 +37,5 @@ class SessionManager {
 			   static_cast<size_t>(SessionState::kCnt)>
 		sessionPool_;
 	std::array<SharedPoolPtr<Session>, Config::kMaxSession> sessionPtrs_;
+	AccountManager* accountManager_ = nullptr;
 };
