@@ -63,14 +63,13 @@ REGISTER_PACKET_HANDLER(kChat, [](Session& session,
 
 bool HandleC2S_REGISTER(Session& session, const PACKET_HEADER& header) {
 	const auto* registerData = reinterpret_cast<const C2S_REGISTER*>(&header);
-	
+
 	size_t idLength = strnlen(registerData->id, Config::kIdLength);
 	size_t passwordLength =
 		strnlen(registerData->password, Config::kPasswordLength);
 
-	Account account{
-		.userId_ = std::string(registerData->id, idLength),
-		.password_ = std::string(registerData->password, passwordLength)};
+	Account account(std::string(registerData->id, idLength),
+					std::string(registerData->password, passwordLength));
 
 	AccountManager* accountManager =
 		session.GetSessionManager()->GetAccountManager();
