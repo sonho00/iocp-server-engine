@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 
+#include "Account.hpp"
 #include "AccountManager.hpp"
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Protocol.hpp"

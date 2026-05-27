@@ -3,10 +3,7 @@
 #include <string>
 #include <unordered_map>
 
-struct Account {
-	std::string userId_;
-	std::string password_;
-};
+#include "Account.hpp"
 
 class AccountManager {
    public:
