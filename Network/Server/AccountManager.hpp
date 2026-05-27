@@ -13,5 +13,5 @@ class AccountManager {
 	bool RegisterAccount(const Account& account);
 
    private:
-	std::unordered_map<std::string, std::string> accounts_;
+	std::unordered_map<std::string, Account> accounts_;
 };
