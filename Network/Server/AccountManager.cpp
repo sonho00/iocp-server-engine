@@ -1,10 +1,17 @@
 #include "AccountManager.hpp"
 
-#include <unordered_map>
+#include "DBManager.hpp"
+
+AccountManager::AccountManager(DBManager* dbManager) : dbManager_(dbManager) {
+	dbManager_->ExecuteNonQuery(
+		"CREATE TABLE IF NOT EXISTS accounts ("
+		"id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		"username TEXT UNIQUE NOT NULL,"
+		"password TEXT NOT NULL);");
+}
 
 bool AccountManager::RegisterAccount(const Account& account) {
-	if (accounts_.contains(account.userId_)) return false;
-
-	accounts_[account.userId_] = account.password_;
-	return true;
+	return dbManager_->ExecuteNonQuery(
+		"INSERT INTO accounts (username, password) VALUES (?, ?);",
+		account.GetUserId(), account.GetPassword());
 }

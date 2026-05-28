@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
-project(IOCPServer CXX)
+project(IOCPServer C CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --- Google Test 설정 추가 ---
@@ -31,12 +31,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-file(GLOB_RECURSE COMMON_SRC "Network/Common/*.cpp")
-file(GLOB_RECURSE SERVER_ONLY_SRC "Network/Server/*.cpp")
+file(GLOB_RECURSE COMMON_SRC_CPP "Network/Common/*.cpp")
+file(GLOB_RECURSE COMMON_SRC_C "Network/Common/*.c")
+file(GLOB_RECURSE SERVER_SRC "Network/Server/*.cpp")
 file(GLOB_RECURSE TEST_SRC "Tests/*.cpp")
 
-add_executable(server ${SERVER_ONLY_SRC} ${COMMON_SRC})
-add_executable(tests ${TEST_SRC} ${COMMON_SRC})
+add_executable(server ${SERVER_SRC} ${COMMON_SRC_CPP} ${COMMON_SRC_C})
+add_executable(tests ${TEST_SRC} ${COMMON_SRC_CPP} ${COMMON_SRC_C})
 
 if(MSVC)
     # /wd4189: 지역 변수가 초기화되었으나 참조되지 않음 경고 끄기

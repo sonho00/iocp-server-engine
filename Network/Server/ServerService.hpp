@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "AccountManager.hpp"
+#include "DBManager.hpp"
 #include "IocpCore.hpp"
 #include "Listener.hpp"
 #include "Network/Common/Logger.hpp"
@@ -12,7 +13,7 @@
 
 class ServerService {
    public:
-	ServerService() : listener_(iocpCore_, sessionManager_, Config::kPort) {}
+	ServerService() : listener_(iocpCore_, sessionManager_, Config::kPort), accountManager_(&dbManager_) {}
 
 	bool Start() {
 		iocpCore_.SetListener(&listener_);
@@ -34,8 +35,9 @@ class ServerService {
    private:
 	WSAManager wsaManager_;
 	ServerUtils::NetFuncs netFuncs_;
-	AccountManager accountManager_;
 	SessionManager sessionManager_;
 	IocpCore iocpCore_;
 	Listener listener_;
+	DBManager dbManager_;
+	AccountManager accountManager_;
 };

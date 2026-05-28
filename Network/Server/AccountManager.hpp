@@ -1,17 +1,15 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
+#include "Account.hpp"
 
-struct Account {
-	std::string userId_;
-	std::string password_;
-};
+class DBManager;
 
 class AccountManager {
    public:
+	AccountManager(DBManager* dbManager);
+
 	bool RegisterAccount(const Account& account);
 
    private:
-	std::unordered_map<std::string, std::string> accounts_;
+	DBManager* dbManager_;
 };
