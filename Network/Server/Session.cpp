@@ -22,6 +22,12 @@ Session::Session()
 	}
 }
 
+Session::~Session() {
+	if (socket_ != INVALID_SOCKET) {
+		closesocket(socket_);
+	}
+}
+
 void Session::Init() {
 	readOv_.Reset();
 	writeOv_.Reset();

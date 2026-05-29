@@ -78,8 +78,6 @@ bool SparsePool<T, N, StateCount, isLazy>::IsValid(uint64_t handle) const {
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
 T* SparsePool<T, N, StateCount, isLazy>::GetObj(uint64_t handle) {
-	if (!IsValid(handle)) return nullptr;
-
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
 
@@ -88,22 +86,19 @@ T* SparsePool<T, N, StateCount, isLazy>::GetObj(uint64_t handle) {
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
 bool SparsePool<T, N, StateCount, isLazy>::AddRef(uint64_t handle) {
-	if (!IsValid(handle)) return false;
-
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
-	slot->refCount_.fetch_add(1, std::memory_order_release);
+	slot->refCount_.fetch_add(1, std::memory_order_relaxed);
 
 	return true;
 }
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
 bool SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
-	if (!IsValid(handle)) return false;
-
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
-	if (slot->refCount_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+	if (slot->refCount_.fetch_sub(1, std::memory_order_release) == 1) {
+		std::atomic_thread_fence(std::memory_order_acquire);
 		pool_.Release(idx);
 		{
 			std::lock_guard lock(mutex_);

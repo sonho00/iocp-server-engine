@@ -11,25 +11,35 @@
 #include <string>
 #include <string_view>
 
-#define LOG_DEBUG(fmt, ...)                            \
-	NetUtils::LogInfo(NetUtils::LogLevel::kDebug, fmt, \
+#define LOG_DEBUG(fmt, ...)                                          \
+	if constexpr (NetUtils::LogLevel::kDebug >= NetUtils::kLogLevel) \
+	NetUtils::LogInfo(NetUtils::LogLevel::kDebug, fmt,               \
 					  std::source_location::current(), ##__VA_ARGS__)
-#define LOG_INFO(fmt, ...)                            \
-	NetUtils::LogInfo(NetUtils::LogLevel::kInfo, fmt, \
+#define LOG_INFO(fmt, ...)                                          \
+	if constexpr (NetUtils::LogLevel::kInfo >= NetUtils::kLogLevel) \
+	NetUtils::LogInfo(NetUtils::LogLevel::kInfo, fmt,               \
 					  std::source_location::current(), ##__VA_ARGS__)
-#define LOG_WARN(fmt, ...)                            \
-	NetUtils::LogInfo(NetUtils::LogLevel::kWarn, fmt, \
+#define LOG_WARN(fmt, ...)                                          \
+	if constexpr (NetUtils::LogLevel::kWarn >= NetUtils::kLogLevel) \
+	NetUtils::LogInfo(NetUtils::LogLevel::kWarn, fmt,               \
 					  std::source_location::current(), ##__VA_ARGS__)
-#define LOG_ERROR(fmt, ...)                             \
-	NetUtils::LogError(NetUtils::LogLevel::kError, fmt, \
+#define LOG_ERROR(fmt, ...)                                          \
+	if constexpr (NetUtils::LogLevel::kError >= NetUtils::kLogLevel) \
+	NetUtils::LogError(NetUtils::LogLevel::kError, fmt,              \
 					   std::source_location::current(), ##__VA_ARGS__)
-#define LOG_FATAL(fmt, ...)                             \
-	NetUtils::LogError(NetUtils::LogLevel::kFatal, fmt, \
+#define LOG_FATAL(fmt, ...)                                          \
+	if constexpr (NetUtils::LogLevel::kFatal >= NetUtils::kLogLevel) \
+	NetUtils::LogError(NetUtils::LogLevel::kFatal, fmt,              \
 					   std::source_location::current(), ##__VA_ARGS__)
 
 namespace NetUtils {
 enum class LogLevel : std::uint8_t { kDebug, kInfo, kWarn, kError, kFatal };
+#ifdef NDEBUG
+constexpr inline LogLevel kLogLevel = LogLevel::kError;
+#else
 constexpr inline LogLevel kLogLevel = LogLevel::kDebug;
+#endif
+
 constexpr std::array<std::string_view, 5> kLevelStrings{
 	"\033[36mDEBUG\033[0m",	  // Cyan
 	"\033[32mINFO \033[0m",	  // Green
@@ -46,7 +56,6 @@ template <typename... Args>
 void LogInfo(LogLevel level, std::string_view fmt_str,
 			 std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
-	if (level < kLogLevel) return;
 	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
 	std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
@@ -58,7 +67,6 @@ template <typename... Args>
 void LogError(LogLevel level, std::string_view fmt_str,
 			  std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
-	if (level < kLogLevel) return;
 	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
 
 	std::cerr << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,

@@ -20,7 +20,7 @@ IocpCore::IocpCore() {
 }
 
 IocpCore::~IocpCore() {
-	isShuttingDown_ = true;
+	isShuttingDown_.store(true, std::memory_order_release);
 	for (auto& _ : threads_) {
 		PostQueuedCompletionStatus(hIocp_, 0, 0, nullptr);
 	}
@@ -70,7 +70,7 @@ void IocpCore::WorkerThread() {
 			hIocp_, &bytesTransferred, &completionKey, &overlapped, INFINITE);
 
 		if (overlapped == nullptr) {
-			if (isShuttingDown_) {
+			if (isShuttingDown_.load(std::memory_order_acquire)) {
 				LOG_INFO("Server is shutting down.");
 				break;
 			}
@@ -117,7 +117,7 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 			break;
 
 		case ERROR_OPERATION_ABORTED:
-			if (isShuttingDown_) {
+			if (isShuttingDown_.load(std::memory_order_acquire)) {
 				LOG_INFO("Server is shutting down. Operation aborted.");
 			} else {
 				LOG_WARN("[Session:{}][Error:{}] Operation aborted",

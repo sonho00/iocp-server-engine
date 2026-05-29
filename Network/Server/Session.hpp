@@ -24,6 +24,7 @@ class Session {
 
    public:
 	Session();
+	~Session();
 
 	void Init();
 

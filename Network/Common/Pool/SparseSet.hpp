@@ -69,14 +69,11 @@ uint64_t SparseSet<N, stateCount>::Pop(size_t state) {
 
 	uint64_t handle = GetHandle(dense_[cursor_[0]]);
 	MoveToState(handle, state);
-	
 	return handle;
 }
 
 template <size_t N, size_t stateCount>
 bool SparseSet<N, stateCount>::Push(uint64_t handle) {
-	if (!IsValid(handle)) return false;
-
 	auto who = static_cast<uint32_t>(handle);
 	MoveToState(handle, 0);
 	sparse_[who].generation_++;
@@ -91,7 +88,6 @@ bool SparseSet<N, stateCount>::MoveToState(uint64_t handle, size_t newState) {
 		LOG_ERROR("Invalid newState: {}, stateCount: {}", newState, stateCount);
 		return false;
 	}
-	if (!IsValid(handle)) return false;
 
 	auto who = static_cast<uint32_t>(handle);
 	while (sparse_[who].state_ < newState) {
@@ -172,11 +168,7 @@ bool SparseSet<N, stateCount>::IsValid(uint64_t handle) const {
 	auto who = static_cast<uint32_t>(handle);
 	auto generation = static_cast<uint32_t>(handle >> kIndexShift);
 
-	bool valid = who < N && sparse_[who].generation_ == generation;
-	if (!valid) {
-		LOG_WARN("[Session:{}] Invalid handle detected", handle);
-	}
-	return valid;
+	return who < N && sparse_[who].generation_ == generation;
 }
 
 template <size_t N, size_t stateCount>
@@ -188,8 +180,6 @@ uint64_t SparseSet<N, stateCount>::GetHandle(uint32_t who) const {
 
 template <size_t N, size_t stateCount>
 size_t SparseSet<N, stateCount>::GetState(uint64_t handle) const {
-	if (!IsValid(handle)) return static_cast<size_t>(-1);
-
 	auto who = static_cast<uint32_t>(handle);
 	return sparse_[who].state_;
 }
