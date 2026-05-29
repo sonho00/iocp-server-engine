@@ -153,16 +153,15 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 | `make all` | 서버, 클라이언트 및 모든 테스트 모듈을 일괄 빌드 |
 | `make server` | 서버 실행 파일 빌드 |
 | `make run-server` | 서버 빌드 후 즉시 실행 |
-| `make client` | 클라이언트 실행 파일 빌드 |
-| `make run-client` | 클라이언트 빌드 후 즉시 실행 |
-| `make test-NN` | `Tests/NN_...` 폴더를 자동 탐색하여 해당 모듈 빌드 후 실행 |
-| `make clean` | 빌드 결과물(`bin/`) 폴더 강제 삭제 및 환경 초기화 |
+| `make tests` | 모든 테스트 모듈 빌드 |
+| `make run-tests` | 테스트 모듈 빌드 후 즉시 실행 |
+| `make clean` | 빌드된 실행 파일과 오브젝트 파일을 모두 삭제하여 빌드 환경 초기화 |
 
 <br>
 
 #### Environment & Build Stack
-```
 
+```
 CPU: 8-Core / 16-Logical Processors
 RAM: 32GB
 OS: Windows (MinGW-w64)
