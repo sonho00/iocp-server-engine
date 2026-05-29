@@ -94,9 +94,7 @@ SharedPoolPtr<T>& SharedPoolPtr<T>::operator=(SharedPoolPtr&& other) noexcept {
 
 template <typename T>
 SharedPoolPtr<T>::~SharedPoolPtr() {
-	if (pool_ && pool_->IsValid(handle_)) {
-		pool_->ReleaseRef(handle_);
-	}
+	if (pool_) pool_->ReleaseRef(handle_);
 }
 
 template <typename T>
@@ -106,7 +104,7 @@ bool SharedPoolPtr<T>::IsValid() const {
 
 template <typename T>
 T* SharedPoolPtr<T>::Get() const {
-	return IsValid() ? pool_->GetObj(handle_) : nullptr;
+	return pool_->GetObj(handle_);
 }
 
 template <typename T>
@@ -121,12 +119,8 @@ T* SharedPoolPtr<T>::operator->() {
 
 template <typename T>
 bool SharedPoolPtr<T>::Reset() {
-	if (pool_ && pool_->IsValid(handle_)) {
-		if (pool_->ReleaseRef(handle_)) {
-			return true;
-		}
-		pool_ = nullptr;
-		handle_ = ISparsePool<T>::kInvalidHandle;
-	}
-	return false;
+	bool result = pool_ && pool_->ReleaseRef(handle_);
+	pool_ = nullptr;
+	handle_ = ISparsePool<T>::kInvalidHandle;
+	return result;
 }
