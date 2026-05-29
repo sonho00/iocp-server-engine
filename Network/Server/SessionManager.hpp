@@ -12,6 +12,7 @@
 class IocpCore;
 class Listener;
 class AccountManager;
+class Account;
 
 class SessionManager {
    public:
@@ -26,10 +27,17 @@ class SessionManager {
 	bool SendToSession(uint64_t handle, const PACKET_HEADER& header);
 	bool Broadcast(const PACKET_HEADER& header, uint64_t sessionHandle);
 
+	bool LogInSession(uint64_t handle, const Account& account);
+	bool LogOutSession(uint64_t handle);
+
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
+
 	SessionState GetState(uint64_t handle);
 	bool SetState(uint64_t handle, SessionState newState);
-	AccountManager* GetAccountManager() const { return accountManager_; }
+
+	[[nodiscard]] AccountManager* GetAccountManager() const {
+		return accountManager_;
+	}
 
    private:
 	IocpCore* iocpCore_ = nullptr;
