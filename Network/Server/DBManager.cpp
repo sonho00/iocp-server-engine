@@ -4,9 +4,9 @@
 #include "Network/Common/SQLite/sqlite3.h"
 
 DBManager::DBManager() {
-	int result = sqlite3_open("server.db", &db_);
+	int result = sqlite3_open(":memory:", &db_);
 	if (result != SQLITE_OK) {
-		LOG_FATAL("Failed to open database: %s", sqlite3_errmsg(db_));
+		LOG_FATAL("Failed to open database: {}", sqlite3_errmsg(db_));
 		db_ = nullptr;
 	}
 }

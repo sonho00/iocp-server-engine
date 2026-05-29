@@ -56,6 +56,7 @@ class Session {
 
 	SOCKET socket_ = INVALID_SOCKET;
 	uint64_t handle_ = SparseSet<Config::kMaxSession>::kInvalidHandle;
+	int64_t accountId_ = 0;
 
 	SessionManager* sessionManager_ = nullptr;
 	Listener* listener_ = nullptr;

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "Account.hpp"
 #include "AccountManager.hpp"
 #include "IocpCore.hpp"
 #include "Listener.hpp"
@@ -91,6 +92,30 @@ bool SessionManager::Broadcast(const PACKET_HEADER& header,
 				return true;
 			return SendToSession(handle, header);
 		});
+}
+
+bool SessionManager::LogInSession(uint64_t handle, const Account& account) {
+	if (!sessionPool_.IsValid(handle)) {
+		LOG_ERROR("Invalid session handle: {}", handle);
+		return false;
+	}
+
+	int64_t result = accountManager_->Authenticate(account);
+	auto idx = static_cast<uint32_t>(handle);
+	sessionPtrs_[idx]->accountId_ = account.GetDbId();
+
+	return result != 0;
+}
+
+bool SessionManager::LogOutSession(uint64_t handle) {
+	if (!sessionPool_.IsValid(handle)) {
+		LOG_ERROR("Invalid session handle: {}", handle);
+		return false;
+	}
+
+	auto idx = static_cast<uint32_t>(handle);
+	sessionPtrs_[idx]->accountId_ = 0;
+	return true;
 }
 
 SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {
