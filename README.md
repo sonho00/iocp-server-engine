@@ -86,6 +86,7 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 (4) `AcceptEx`: 소켓 수락 과정도 비동기화하여 대량 접속 요청 시의 지연 시간 최적화.
 (5) `DisconnectEx`: 세션 종료 시 소켓 자원 회수를 비동기화하여 안정성 강화.
 (6) `Broadcast`: 패킷을 전체 세션에 전파하는 기능 구현.
+(7) `Login`: 클라이언트 인증 및 세션 관리 기능 구현.
 
 <br>
 
@@ -100,6 +101,7 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 | `Connection Stress` | 대량의 클라이언트가 재접속과 끊김을 반복하는 상황에서 서버의 안정성 및 자원 관리 능력 테스트 | **Pass** |
 | `Broadcast` | 서버에서 다수의 클라이언트에게 패킷을 전파할 때, 모든 클라이언트가 정확히 수신하는지 확인 | **Pass** |
 | `Invalid Packet Handling` | 클라이언트에서 의도적으로 잘못된 패킷을 전송하여 서버의 예외 처리 및 보안 대응 능력 검증 | **Pass** |
+| `Login` | 클라이언트가 로그인 요청을 보냈을 때, 서버가 올바르게 인증하고 세션을 관리하는지 테스트 | **Pass** |
 
 <br>
 
@@ -133,15 +135,35 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 
 학습 과정 중 발생한 고난도 버그와 그 해결 과정을 기록합니다.
 
-<br>
+#### Case 1
 
-[트러블슈팅: 로그 지연으로 인한 핸들 파괴 분석](./Troubleshooting.md)
+[타임존 연산 오버헤드로 인한 비동기 IO 핸들 파괴 분석](TroubleShooting.md#case-1-타임존-연산-오버헤드로-인한-비동기-io-핸들-파괴-분석)
 
 문제: `AcceptEx` 도입 후, 로그 포맷만 바꿨는데 `WSARecv`에서 커널 에러(`ERROR_PATH_NOT_FOUND`)가 발생하는 기현상 발생.
 
 원인: `std::chrono::current_zone()`의 오버헤드가 네트워크 루프의 `Critical Path`를 방해하여 OS가 소켓 핸들 통로를 무효화함.
 
 해결: `git bisect`를 통해 범인을 특정하고, 로깅 로직을 경량화하여 타이밍 이슈 해결.
+
+#### Case 2
+
+[Sparse Set 락 누락으로 인한 세션 상태 불일치 분석](TroubleShooting.md#case-2-sparse-set-락-누락으로-인한-세션-상태-불일치-분석)
+
+문제: 재접속 스트레스 테스트 중 특정 파티션에 세션이 누적되며 세션 풀이 고갈되어 테스트가 중단됨.
+
+원인: `Dense` 배열에만 락을 적용하고 `Sparse` 배열에는 락을 적용하지 않아, 두 배열의 갱신이 원자적으로 이루어지지 않아 상태 전환이 틀어짐.
+
+해결: `Sparse` 배열 접근에도 동일한 락을 적용하여 두 배열의 갱신이 원자적으로 이루어지도록 수정.
+
+#### Case 3
+
+[서버 종료 시 객체 수명 주기 및 멤버 변수 소멸 순서로 인한 크래시 분석](TroubleShooting.md#case-3-서버-종료-시-객체-수명-주기-및-멤버-변수-소멸-순서로-인한-크래시-분석)
+
+문제: 서버 종료 시 매직 버퍼(`MagicBuffer`)의 `Clear` 함수에서 크래시가 발생함.
+
+원인: 서버 종료 시 객체 소멸 순서에 의해 `MagicBuffer`의 멤버 변수 중 일부가 이미 소멸된 상태에서 `Clear` 함수가 호출되어 접근 위반이 발생함.
+
+해결: 소멸자 실행 도중 참조 카운트 0이 되더라도 객체를 초기화하면서 이미 해제된 멤버 변수를 건드리지 않도록 변경.
 
 <br>
 
@@ -151,16 +173,15 @@ Central Queue  Avg 1757.729ms / Min 1666.661ms
 | `make all` | 서버, 클라이언트 및 모든 테스트 모듈을 일괄 빌드 |
 | `make server` | 서버 실행 파일 빌드 |
 | `make run-server` | 서버 빌드 후 즉시 실행 |
-| `make client` | 클라이언트 실행 파일 빌드 |
-| `make run-client` | 클라이언트 빌드 후 즉시 실행 |
-| `make test-NN` | `Tests/NN_...` 폴더를 자동 탐색하여 해당 모듈 빌드 후 실행 |
-| `make clean` | 빌드 결과물(`bin/`) 폴더 강제 삭제 및 환경 초기화 |
+| `make tests` | 모든 테스트 모듈 빌드 |
+| `make run-tests` | 테스트 모듈 빌드 후 즉시 실행 |
+| `make clean` | 빌드된 실행 파일과 오브젝트 파일을 모두 삭제하여 빌드 환경 초기화 |
 
 <br>
 
 #### Environment & Build Stack
-```
 
+```
 CPU: 8-Core / 16-Logical Processors
 RAM: 32GB
 OS: Windows (MinGW-w64)
