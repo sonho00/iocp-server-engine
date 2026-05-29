@@ -89,23 +89,24 @@ bool Listener::HandleAccept(SharedPoolPtr<Session>& session) {
 
 bool Listener::PostAccept() {
 	while (true) {
-		size_t current = pendingAccepts_.load();
+		size_t current = pendingAccepts_.load(std::memory_order_relaxed);
 		if (current >= Config::kMaxAccept) {
 			break;
 		}
 
-		if (!pendingAccepts_.compare_exchange_strong(current, current + 1))
+		if (!pendingAccepts_.compare_exchange_weak(current, current + 1,
+													 std::memory_order_relaxed))
 			continue;
 
 		SharedPoolPtr<Session> sessionPtr = sessionManager_.CreateSession();
 		if (!sessionPtr.IsValid()) {
-			pendingAccepts_--;
+			pendingAccepts_.fetch_sub(1, std::memory_order_relaxed);
 			LOG_WARN("No available session for accept");
 			return false;
 		}
 
 		if (!RegisterAccept(sessionPtr)) {
-			pendingAccepts_--;
+			pendingAccepts_.fetch_sub(1, std::memory_order_relaxed);
 			LOG_ERROR("[Session:{}] Failed to post AcceptEx",
 					  sessionPtr->GetHandle());
 			sessionPtr->Disconnect();
@@ -148,6 +149,6 @@ bool Listener::RegisterAccept(SharedPoolPtr<Session>& sessionPtr) {
 }
 
 void Listener::DecrementPendingAccepts() {
-	pendingAccepts_--;
+	pendingAccepts_.fetch_sub(1, std::memory_order_relaxed);
 	PostAccept();
 }
