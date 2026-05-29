@@ -96,7 +96,66 @@ REGISTER_PACKET_HANDLER(kRegister,
 							return HandleC2S_REGISTER(session, header);
 						});
 
+bool HandleC2S_LOGIN(Session& session, const PACKET_HEADER& header) {
+	const auto* loginData = reinterpret_cast<const C2S_LOGIN*>(&header);
+
+	size_t idLength = strnlen(loginData->id, Config::kIdLength);
+	size_t passwordLength =
+		strnlen(loginData->password, Config::kPasswordLength);
+
+	Account account(std::string(loginData->id, idLength),
+					std::string(loginData->password, passwordLength));
+
+	S2C_LOGIN response{};
+	response.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kLogin);
+	response.header.size = sizeof(S2C_LOGIN);
+	response.success =
+		session.GetSessionManager()->LogInSession(session.GetHandle(), account);
+	const char* resultMessage =
+		response.success ? "Login successful" : "Invalid credentials";
+	std::strncpy(response.message, resultMessage, sizeof(response.message) - 1);
+	response.message[sizeof(response.message) - 1] = '\0';
+
+	if (!session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response))) {
+		LOG_ERROR("Failed to send LOGIN response");
+		return false;
+	}
+
+	return true;
+}
+REGISTER_PACKET_HANDLER(kLogin,
+						[](Session& session, const PACKET_HEADER& header) {
+							return HandleC2S_LOGIN(session, header);
+						});
+
+bool HandleC2S_LOGOUT(Session& session,
+					  [[maybe_unused]] const PACKET_HEADER& header) {
+	S2C_LOGOUT response{};
+	response.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kLogout);
+	response.header.size = sizeof(S2C_LOGOUT);
+	response.success = true;
+	const char* resultMessage = "Logout successful";
+	std::strncpy(response.message, resultMessage, sizeof(response.message) - 1);
+	response.message[sizeof(response.message) - 1] = '\0';
+
+	if (!session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response))) {
+		LOG_ERROR("Failed to send LOGOUT response");
+		return false;
+	}
+
+	session.GetSessionManager()->LogOutSession(session.GetHandle());
+
+	return true;
+}
+REGISTER_PACKET_HANDLER(kLogout,
+						[](Session& session, const PACKET_HEADER& header) {
+							return HandleC2S_LOGOUT(session, header);
+						});
+
 bool Execute(Session& session, const PACKET_HEADER& header) {
+	LOG_INFO("[Session:{}] Executing packet - ID: {}, Size: {}",
+			 session.GetHandle(), static_cast<uint16_t>(header.id),
+			 header.size);
 	return handlers[static_cast<size_t>(header.id)](session, header);
 }
 }  // namespace PacketHandler
