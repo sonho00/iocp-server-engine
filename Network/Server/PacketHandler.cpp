@@ -2,19 +2,62 @@
 
 #include <cstring>
 #include <string>
+#include <vector>
 
 #include "Account.hpp"
 #include "AccountManager.hpp"
+#include "Network/Common/Config.hpp"
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Protocol.hpp"
 #include "Session.hpp"
 #include "SessionManager.hpp"
 
-namespace PacketHandler {
-std::array<HandlerFunc, static_cast<size_t>(C2S_PACKET_ID::kCnt)> handlers;
+PacketHandler::PacketHandler(SessionManager* sessionManager,
+							 AccountManager* accountManager)
+	: sessionManager_(sessionManager), accountManager_(accountManager) {
+	handlers_[static_cast<size_t>(C2S_PACKET_ID::kMove)] =
+		[this](Session& session, const PACKET_HEADER& header) {
+			return HandleC2S_MOVE(session, header);
+		};
+	handlers_[static_cast<size_t>(C2S_PACKET_ID::kChat)] =
+		[this](Session& session, const PACKET_HEADER& header) {
+			return HandleC2S_CHAT(session, header);
+		};
+	handlers_[static_cast<size_t>(C2S_PACKET_ID::kRegister)] =
+		[this](Session& session, const PACKET_HEADER& header) {
+			return HandleC2S_REGISTER(session, header);
+		};
+	handlers_[static_cast<size_t>(C2S_PACKET_ID::kLogin)] =
+		[this](Session& session, const PACKET_HEADER& header) {
+			return HandleC2S_LOGIN(session, header);
+		};
+	handlers_[static_cast<size_t>(C2S_PACKET_ID::kLogout)] =
+		[this](Session& session, const PACKET_HEADER& header) {
+			return HandleC2S_LOGOUT(session, header);
+		};
+}
 
-bool HandleC2S_MOVE(SessionManager& sessionManager, Session& session,
-					const PACKET_HEADER& header) {
+void PacketHandler::Execute(Session& session, const PACKET_HEADER& header) {
+	if (header.id >= static_cast<uint16_t>(C2S_PACKET_ID::kCnt)) {
+		LOG_ERROR("[Session:{}] Invalid packet ID: {}", session.GetHandle(),
+				  header.id);
+		return;
+	}
+
+	auto& handler = handlers_[header.id];
+	if (!handler) {
+		LOG_ERROR("[Session:{}] No handler for packet ID: {}",
+				  session.GetHandle(), header.id);
+		return;
+	}
+
+	if (!handler(session, header)) {
+		LOG_ERROR("[Session:{}] Failed to handle packet ID: {}",
+				  session.GetHandle(), header.id);
+	}
+}
+
+bool PacketHandler::HandleC2S_MOVE(Session& session, const PACKET_HEADER& header) {
 	const auto* moveData = reinterpret_cast<const C2S_MOVE*>(&header);
 	S2C_MOVE movePacket{};
 	movePacket.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kMove);
@@ -23,7 +66,7 @@ bool HandleC2S_MOVE(SessionManager& sessionManager, Session& session,
 	movePacket.x = moveData->x;
 	movePacket.y = moveData->y;
 
-	if (!sessionManager.Broadcast(
+	if (!sessionManager_->Broadcast(
 			reinterpret_cast<const PACKET_HEADER&>(movePacket),
 			session.GetHandle())) {
 		LOG_ERROR("Failed to broadcast MOVE packet");
@@ -31,13 +74,8 @@ bool HandleC2S_MOVE(SessionManager& sessionManager, Session& session,
 	}
 	return true;
 }
-REGISTER_PACKET_HANDLER(kMove, [](Session& session,
-								  const PACKET_HEADER& header) {
-	return HandleC2S_MOVE(*session.GetSessionManager(), session, header);
-});
 
-bool HandleC2S_CHAT(SessionManager& sessionManager, Session& session,
-					const PACKET_HEADER& header) {
+bool PacketHandler::HandleC2S_CHAT(Session& session, const PACKET_HEADER& header) {
 	std::vector<char> data(header.size + sizeof(session.GetHandle()));
 	auto* chatPacket = reinterpret_cast<S2C_CHAT*>(data.data());
 	chatPacket->header.id = static_cast<uint16_t>(S2C_PACKET_ID::kChat);
@@ -47,7 +85,7 @@ bool HandleC2S_CHAT(SessionManager& sessionManager, Session& session,
 				reinterpret_cast<const char*>(&header) + sizeof(PACKET_HEADER),
 				header.size - sizeof(PACKET_HEADER));
 
-	if (!sessionManager.Broadcast(
+	if (!sessionManager_->Broadcast(
 			reinterpret_cast<const PACKET_HEADER&>(*chatPacket),
 			session.GetHandle())) {
 		LOG_ERROR("Failed to broadcast CHAT packet");
@@ -56,12 +94,8 @@ bool HandleC2S_CHAT(SessionManager& sessionManager, Session& session,
 
 	return true;
 }
-REGISTER_PACKET_HANDLER(kChat, [](Session& session,
-								  const PACKET_HEADER& header) {
-	return HandleC2S_CHAT(*session.GetSessionManager(), session, header);
-});
-
-bool HandleC2S_REGISTER(Session& session, const PACKET_HEADER& header) {
+bool PacketHandler::HandleC2S_REGISTER(Session& session,
+								   const PACKET_HEADER& header) {
 	const auto* registerData = reinterpret_cast<const C2S_REGISTER*>(&header);
 
 	size_t idLength = strnlen(registerData->id, Config::kIdLength);
@@ -71,9 +105,7 @@ bool HandleC2S_REGISTER(Session& session, const PACKET_HEADER& header) {
 	Account account(std::string(registerData->id, idLength),
 					std::string(registerData->password, passwordLength));
 
-	AccountManager* accountManager =
-		session.GetSessionManager()->GetAccountManager();
-	bool success = accountManager->RegisterAccount(account);
+	bool success = accountManager_->RegisterAccount(account);
 
 	S2C_REGISTER response{};
 	response.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kRegister);
@@ -91,12 +123,8 @@ bool HandleC2S_REGISTER(Session& session, const PACKET_HEADER& header) {
 
 	return true;
 }
-REGISTER_PACKET_HANDLER(kRegister,
-						[](Session& session, const PACKET_HEADER& header) {
-							return HandleC2S_REGISTER(session, header);
-						});
 
-bool HandleC2S_LOGIN(Session& session, const PACKET_HEADER& header) {
+bool PacketHandler::HandleC2S_LOGIN(Session& session, const PACKET_HEADER& header) {
 	const auto* loginData = reinterpret_cast<const C2S_LOGIN*>(&header);
 
 	size_t idLength = strnlen(loginData->id, Config::kIdLength);
@@ -110,7 +138,7 @@ bool HandleC2S_LOGIN(Session& session, const PACKET_HEADER& header) {
 	response.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kLogin);
 	response.header.size = sizeof(S2C_LOGIN);
 	response.success =
-		session.GetSessionManager()->LogInSession(session.GetHandle(), account);
+		sessionManager_->LogInSession(session.GetHandle(), account);
 	const char* resultMessage =
 		response.success ? "Login successful" : "Invalid credentials";
 	std::strncpy(response.message, resultMessage, sizeof(response.message) - 1);
@@ -123,13 +151,9 @@ bool HandleC2S_LOGIN(Session& session, const PACKET_HEADER& header) {
 
 	return true;
 }
-REGISTER_PACKET_HANDLER(kLogin,
-						[](Session& session, const PACKET_HEADER& header) {
-							return HandleC2S_LOGIN(session, header);
-						});
 
-bool HandleC2S_LOGOUT(Session& session,
-					  [[maybe_unused]] const PACKET_HEADER& header) {
+bool PacketHandler::HandleC2S_LOGOUT(Session& session,
+								 [[maybe_unused]] const PACKET_HEADER& header) {
 	S2C_LOGOUT response{};
 	response.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kLogout);
 	response.header.size = sizeof(S2C_LOGOUT);
@@ -143,19 +167,7 @@ bool HandleC2S_LOGOUT(Session& session,
 		return false;
 	}
 
-	session.GetSessionManager()->LogOutSession(session.GetHandle());
+	sessionManager_->LogOutSession(session.GetHandle());
 
 	return true;
 }
-REGISTER_PACKET_HANDLER(kLogout,
-						[](Session& session, const PACKET_HEADER& header) {
-							return HandleC2S_LOGOUT(session, header);
-						});
-
-bool Execute(Session& session, const PACKET_HEADER& header) {
-	LOG_INFO("[Session:{}] Executing packet - ID: {}, Size: {}",
-			 session.GetHandle(), static_cast<uint16_t>(header.id),
-			 header.size);
-	return handlers[static_cast<size_t>(header.id)](session, header);
-}
-}  // namespace PacketHandler

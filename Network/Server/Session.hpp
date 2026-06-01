@@ -18,6 +18,7 @@ enum class SessionState : uint8_t {
 
 class SessionManager;
 class Listener;
+class PacketHandler;
 
 class Session {
 	friend class SessionManager;
@@ -61,6 +62,7 @@ class Session {
 
 	SessionManager* sessionManager_ = nullptr;
 	Listener* listener_ = nullptr;
+	PacketHandler* packetHandler_ = nullptr;
 
 	bool isSending_ = false;
 

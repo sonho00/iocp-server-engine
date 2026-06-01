@@ -8,16 +8,21 @@
 #include "Listener.hpp"
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/WSAManager.hpp"
+#include "PacketHandler.hpp"
 #include "ServerUtils.hpp"
 #include "SessionManager.hpp"
 
 class ServerService {
    public:
-	ServerService() : listener_(iocpCore_, sessionManager_, Config::kPort), accountManager_(&dbManager_) {}
+	ServerService()
+		: packetHandler_(&sessionManager_, &accountManager_),
+		  listener_(iocpCore_, sessionManager_, Config::kPort),
+		  accountManager_(&dbManager_) {}
 
 	bool Start() {
 		iocpCore_.SetListener(&listener_);
-		sessionManager_.Init(iocpCore_, listener_, accountManager_);
+		sessionManager_.Init(iocpCore_, listener_, accountManager_,
+							 packetHandler_);
 
 		size_t numThreads = std::thread::hardware_concurrency();
 		if (!iocpCore_.Start(numThreads)) {
@@ -36,6 +41,7 @@ class ServerService {
 	WSAManager wsaManager_;
 	ServerUtils::NetFuncs netFuncs_;
 	SessionManager sessionManager_;
+	PacketHandler packetHandler_;
 	IocpCore iocpCore_;
 	Listener listener_;
 	DBManager dbManager_;

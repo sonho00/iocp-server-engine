@@ -1,23 +1,21 @@
 #pragma once
 
 #include <array>
-#include <cstdint>
 
-#include "Network/Common/Config.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Pool/SparsePool.hpp"
-#include "Network/Common/Protocol.hpp"
 #include "Session.hpp"
 
+class Account;
+class AccountManager;
 class IocpCore;
 class Listener;
-class AccountManager;
-class Account;
+class PacketHandler;
 
 class SessionManager {
    public:
 	bool Init(IocpCore& iocpCore, Listener& listener,
-			  AccountManager& accountManager);
+			  AccountManager& accountManager, PacketHandler& packetHandler);
 	bool RegisterSession(uint64_t handle);
 
 	SharedPoolPtr<Session> CreateSession();
@@ -40,10 +38,12 @@ class SessionManager {
 	}
 
    private:
-	IocpCore* iocpCore_ = nullptr;
 	SparsePool<Session, Config::kMaxSession,
 			   static_cast<size_t>(SessionState::kCnt)>
 		sessionPool_;
 	std::array<SharedPoolPtr<Session>, Config::kMaxSession> sessionPtrs_;
+
 	AccountManager* accountManager_ = nullptr;
+	IocpCore* iocpCore_ = nullptr;
+	PacketHandler* packetHandler_ = nullptr;
 };

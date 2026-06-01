@@ -92,11 +92,7 @@ bool Session::OnRead(DWORD bytesTransferred) {
 
 		if (availableData < header->size) break;
 
-		if (!PacketHandler::Execute(*this, *header)) {
-			LOG_ERROR("[Session:{}] Failed to handle packet with ID: {}",
-					  handle_, static_cast<uint16_t>(header->id));
-			return false;
-		}
+		packetHandler_->Execute(*this, *header);
 
 		LOG_DEBUG("[Session:{}] Processed packet ID: {}, Size: {}", handle_,
 				  static_cast<uint16_t>(header->id), header->size);
