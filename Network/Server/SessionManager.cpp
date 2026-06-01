@@ -11,6 +11,7 @@
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Pool/SparsePool.hpp"
+#include "PacketHandler.hpp"
 #include "Session.hpp"
 
 bool SessionManager::Init(IocpCore& iocpCore, Listener& listener,

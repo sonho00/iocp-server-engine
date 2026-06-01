@@ -92,7 +92,8 @@ bool Session::OnRead(DWORD bytesTransferred) {
 
 		if (availableData < header->size) break;
 
-		packetHandler_->Execute(*this, *header);
+		packetHandler_->PostTask(
+			[this, header]() { packetHandler_->Execute(*this, *header); });
 
 		LOG_DEBUG("[Session:{}] Processed packet ID: {}, Size: {}", handle_,
 				  static_cast<uint16_t>(header->id), header->size);

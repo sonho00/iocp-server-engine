@@ -35,6 +35,24 @@ PacketHandler::PacketHandler(SessionManager* sessionManager,
 		[this](Session& session, const PACKET_HEADER& header) {
 			return HandleLogout(session, header);
 		};
+
+	workerThreads_.reserve(Config::kWorkerThreadCount);
+	for (size_t i = 0; i < Config::kWorkerThreadCount; ++i) {
+		workerThreads_.emplace_back(&PacketHandler::WorkerThreadFunc, this);
+	}
+}
+
+PacketHandler::~PacketHandler() {
+	taskQueue_.Shutdown();
+	for (auto& thread : workerThreads_) {
+		if (thread.joinable()) {
+			thread.join();
+		}
+	}
+}
+
+void PacketHandler::PostTask(std::function<void()> task) {
+	taskQueue_.Push(std::move(task));
 }
 
 void PacketHandler::Execute(Session& session, const PACKET_HEADER& header) {
@@ -170,4 +188,12 @@ bool PacketHandler::HandleLogout(Session& session,
 	sessionManager_->LogOutSession(session.GetHandle());
 
 	return true;
+}
+
+void PacketHandler::WorkerThreadFunc() {
+	while (true) {
+		auto task = taskQueue_.Pop();
+		if (!task) break;
+		task();
+	}
 }

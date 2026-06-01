@@ -2,8 +2,11 @@
 
 #include <array>
 #include <functional>
+#include <thread>
+#include <vector>
 
 #include "Network/Common/Protocol.hpp"
+#include "TaskQueue.hpp"
 
 class SessionManager;
 class AccountManager;
@@ -14,7 +17,9 @@ class PacketHandler {
    public:
 	PacketHandler(SessionManager* sessionManager,
 				  AccountManager* accountManager);
+	~PacketHandler();
 
+	void PostTask(std::function<void()> task);
 	void Execute(Session& session, const PACKET_HEADER& header);
 
    private:
@@ -29,6 +34,8 @@ class PacketHandler {
 	std::array<std::function<bool(Session&, const PACKET_HEADER&)>,
 			   static_cast<size_t>(PACKET_ID::kCnt)>
 		handlers_;
+	std::vector<std::thread> workerThreads_;
+	TaskQueue taskQueue_;
 
 	SessionManager* sessionManager_ = nullptr;
 	AccountManager* accountManager_ = nullptr;

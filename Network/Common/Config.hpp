@@ -17,4 +17,6 @@ constexpr uint32_t kMaxSession = 4096;
 
 constexpr uint32_t kIdLength = 32;
 constexpr uint32_t kPasswordLength = 32;
+
+constexpr uint32_t kWorkerThreadCount = 1;
 }  // namespace Config
