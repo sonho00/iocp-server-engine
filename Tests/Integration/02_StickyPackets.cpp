@@ -15,7 +15,7 @@ TEST(StickyPacketsTest, VerifyDataIntegrity) {
 	auto* sendHeader = reinterpret_cast<PACKET_HEADER*>(sendBuf.data());
 
 	sendHeader->size = 25004;
-	sendHeader->id = static_cast<uint16_t>(C2S_PACKET_ID::kChat);
+	sendHeader->id = static_cast<uint16_t>(PACKET_ID::kChat);
 
 	for (int i = 0; i < 5000; ++i) {
 		sprintf_s(sendBuf.data() + sizeof(PACKET_HEADER) + i * 5, 6, "%04d ",
@@ -31,7 +31,7 @@ TEST(StickyPacketsTest, VerifyDataIntegrity) {
 	for (int i = 0; i < 3; ++i) {
 		auto* recvHeader =
 			reinterpret_cast<PACKET_HEADER*>(recvBuf.data() + i * 25012);
-		EXPECT_EQ(recvHeader->id, static_cast<uint16_t>(C2S_PACKET_ID::kChat));
+		EXPECT_EQ(recvHeader->id, static_cast<uint16_t>(PACKET_ID::kChat));
 		EXPECT_EQ(recvHeader->size, 25012);
 
 		EXPECT_EQ(memcmp(recvBuf.data() + i * 25012 + sizeof(PACKET_HEADER) +

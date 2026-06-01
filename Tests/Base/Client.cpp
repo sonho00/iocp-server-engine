@@ -132,8 +132,8 @@ PACKET_HEADER* Client::ReceivePacket(char* buffer) {
 
 bool Client::HandlePacket(const PACKET_HEADER& header) {
 	switch (header.id) {
-		case static_cast<uint16_t>(C2S_PACKET_ID::kMove):
-		case static_cast<uint16_t>(C2S_PACKET_ID::kChat):
+		case static_cast<uint16_t>(PACKET_ID::kMove):
+		case static_cast<uint16_t>(PACKET_ID::kChat):
 			break;
 
 		default:

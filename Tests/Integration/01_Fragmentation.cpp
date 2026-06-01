@@ -12,7 +12,7 @@ TEST(FragmentationTest, HandleFragmentedPacket) {
 	std::array<char, 404> recvBuf{};
 	auto* sendHeader = reinterpret_cast<PACKET_HEADER*>(sendBuf.data());
 
-	sendHeader->id = static_cast<uint16_t>(C2S_PACKET_ID::kChat);
+	sendHeader->id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sendHeader->size = 404;
 
 	for (int i = 0; i < 100; ++i) {
@@ -27,8 +27,7 @@ TEST(FragmentationTest, HandleFragmentedPacket) {
 	S2C_CHAT recvPacket;
 	EXPECT_TRUE(client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
 
-	EXPECT_EQ(recvPacket.header.id,
-			  static_cast<uint16_t>(S2C_PACKET_ID::kChat));
+	EXPECT_EQ(recvPacket.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
 	EXPECT_EQ(recvPacket.header.size,
 			  sendHeader->size + sizeof(recvPacket.sessionHandle));
 	EXPECT_STREQ(recvPacket.message, sendBuf.data() + sizeof(PACKET_HEADER));

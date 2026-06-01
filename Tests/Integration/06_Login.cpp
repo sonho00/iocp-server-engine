@@ -8,7 +8,7 @@
 void CreateC2SRegisterPacket(C2S_REGISTER& packet, const char* id,
 							 const char* password) {
 	packet.header.size = sizeof(C2S_REGISTER);
-	packet.header.id = static_cast<uint8_t>(C2S_PACKET_ID::kRegister);
+	packet.header.id = static_cast<uint8_t>(PACKET_ID::kRegister);
 	strncpy(packet.id, id, sizeof(packet.id) - 1);
 	strncpy(packet.password, password, sizeof(packet.password) - 1);
 }
@@ -16,27 +16,26 @@ void CreateC2SRegisterPacket(C2S_REGISTER& packet, const char* id,
 void CreateC2SLoginPacket(C2S_LOGIN& packet, const char* id,
 						  const char* password) {
 	packet.header.size = sizeof(C2S_LOGIN);
-	packet.header.id = static_cast<uint8_t>(C2S_PACKET_ID::kLogin);
+	packet.header.id = static_cast<uint8_t>(PACKET_ID::kLogin);
 	strncpy(packet.id, id, sizeof(packet.id) - 1);
 	strncpy(packet.password, password, sizeof(packet.password) - 1);
 }
 
 void CreateC2SLogoutPacket(C2S_LOGOUT& packet) {
 	packet.header.size = sizeof(C2S_LOGOUT);
-	packet.header.id = static_cast<uint8_t>(C2S_PACKET_ID::kLogout);
+	packet.header.id = static_cast<uint8_t>(PACKET_ID::kLogout);
 }
 
 void CheckS2CRegisterPacket(S2C_REGISTER& packet, bool success,
 							const char* message) {
-	EXPECT_EQ(packet.header.id,
-			  static_cast<uint16_t>(S2C_PACKET_ID::kRegister));
+	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kRegister));
 	EXPECT_EQ(packet.header.size, sizeof(S2C_REGISTER));
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);
 }
 
 void CheckS2CLoginPacket(S2C_LOGIN& packet, bool success, const char* message) {
-	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(S2C_PACKET_ID::kLogin));
+	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kLogin));
 	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGIN));
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);
@@ -44,7 +43,7 @@ void CheckS2CLoginPacket(S2C_LOGIN& packet, bool success, const char* message) {
 
 void CheckS2CLogoutPacket(S2C_LOGOUT& packet, bool success,
 						  const char* message) {
-	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(S2C_PACKET_ID::kLogout));
+	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kLogout));
 	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGOUT));
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);

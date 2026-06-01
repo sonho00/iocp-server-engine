@@ -11,7 +11,7 @@ TEST(BroadcastTest, BroadcastMessageToAllClients) {
 
 	C2S_CHAT sendPacket;
 	strcpy_s(sendPacket.message, "Hello, everyone!");
-	sendPacket.header.id = static_cast<uint16_t>(C2S_PACKET_ID::kChat);
+	sendPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sendPacket.header.size =
 		sizeof(sendPacket.header) + strlen(sendPacket.message) + 1;
 	EXPECT_TRUE(client3.SendByte(reinterpret_cast<char*>(&sendPacket),
@@ -23,10 +23,8 @@ TEST(BroadcastTest, BroadcastMessageToAllClients) {
 
 	size_t expectedSize =
 		sendPacket.header.size + sizeof(uint64_t);	// 세션 ID 추가
-	EXPECT_EQ(recvPacket1.header.id,
-			  static_cast<uint16_t>(S2C_PACKET_ID::kChat));
-	EXPECT_EQ(recvPacket2.header.id,
-			  static_cast<uint16_t>(S2C_PACKET_ID::kChat));
+	EXPECT_EQ(recvPacket1.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
+	EXPECT_EQ(recvPacket2.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
 	EXPECT_EQ(recvPacket1.header.size, expectedSize);
 	EXPECT_EQ(recvPacket2.header.size, expectedSize);
 	EXPECT_STREQ(recvPacket1.message, "Hello, everyone!");

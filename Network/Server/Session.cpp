@@ -221,7 +221,7 @@ bool Session::Connect() {
 	}
 
 	S2C_CHAT welcomePacket{};
-	welcomePacket.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kChat);
+	welcomePacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sprintf(welcomePacket.message, "%lld", handle_);
 	welcomePacket.header.size =
 		sizeof(welcomePacket.header) + strlen(welcomePacket.message) + 1;
