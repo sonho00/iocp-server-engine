@@ -11,12 +11,15 @@
 #include "Network/Common/Logger.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Pool/SparsePool.hpp"
+#include "PacketHandler.hpp"
 #include "Session.hpp"
 
 bool SessionManager::Init(IocpCore& iocpCore, Listener& listener,
-						  AccountManager& accountManager) {
+						  AccountManager& accountManager,
+						  PacketHandler& packetHandler) {
 	iocpCore_ = &iocpCore;
 	accountManager_ = &accountManager;
+	packetHandler_ = &packetHandler;
 	sessionPool_.SetPostReleaseFunc([&listener] { listener.PostAccept(); });
 
 	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
@@ -51,6 +54,7 @@ SharedPoolPtr<Session> SessionManager::CreateSession() {
 
 	uint64_t handle = sessionPtr.GetHandle();
 	sessionPtr->sessionManager_ = this;
+	sessionPtr->packetHandler_ = packetHandler_;
 	sessionPtr->handle_ = handle;
 	auto idx = static_cast<uint32_t>(handle);
 	sessionPtrs_[idx] = std::move(sessionPtr);

@@ -92,11 +92,8 @@ bool Session::OnRead(DWORD bytesTransferred) {
 
 		if (availableData < header->size) break;
 
-		if (!PacketHandler::Execute(*this, *header)) {
-			LOG_ERROR("[Session:{}] Failed to handle packet with ID: {}",
-					  handle_, static_cast<uint16_t>(header->id));
-			return false;
-		}
+		packetHandler_->PostTask(
+			[this, header]() { packetHandler_->Execute(*this, *header); });
 
 		LOG_DEBUG("[Session:{}] Processed packet ID: {}, Size: {}", handle_,
 				  static_cast<uint16_t>(header->id), header->size);
@@ -225,7 +222,7 @@ bool Session::Connect() {
 	}
 
 	S2C_CHAT welcomePacket{};
-	welcomePacket.header.id = static_cast<uint16_t>(S2C_PACKET_ID::kChat);
+	welcomePacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sprintf(welcomePacket.message, "%lld", handle_);
 	welcomePacket.header.size =
 		sizeof(welcomePacket.header) + strlen(welcomePacket.message) + 1;

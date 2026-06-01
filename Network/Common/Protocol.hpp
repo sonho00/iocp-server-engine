@@ -12,16 +12,7 @@ enum class IO_TYPE : uint8_t {
 	kDisconnect,
 	kCnt
 };
-enum class C2S_PACKET_ID : uint8_t {
-	kNone,
-	kMove,
-	kChat,
-	kRegister,
-	kLogin,
-	kLogout,
-	kCnt
-};
-enum class S2C_PACKET_ID : uint8_t {
+enum class PACKET_ID : uint8_t {
 	kNone,
 	kMove,
 	kChat,
