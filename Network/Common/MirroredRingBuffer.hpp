@@ -3,10 +3,12 @@
 #include <WinSock2.h>
 #include <minwinbase.h>
 
-class MagicBuffer {
+#include "Config.hpp"
+
+class MirroredRingBuffer {
    public:
-	MagicBuffer(size_t size);
-	~MagicBuffer();
+	MirroredRingBuffer(size_t size = Config::kRecvBufferSize);
+	~MirroredRingBuffer();
 
 	[[nodiscard]] char* GetBuffer() const { return buffer_; }
 	[[nodiscard]] size_t GetSize() const { return size_; }

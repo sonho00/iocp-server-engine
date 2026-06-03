@@ -13,8 +13,7 @@
 #include "ServerUtils.hpp"
 #include "SessionManager.hpp"
 
-Session::Session()
-	: readOv_(Config::kMagicBufferSize), writeOv_(Config::kMagicBufferSize) {
+Session::Session() {
 	socket_ = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
 						WSA_FLAG_OVERLAPPED);
 	if (socket_ == INVALID_SOCKET) {
