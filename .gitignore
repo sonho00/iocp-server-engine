@@ -1,19 +1,16 @@
-# Executables
-*.exe
-*.out
-
-# Objects and Libraries
-*.o
-*.obj
-*.lib
-*.dll
-
-# IDE (VS Code, Visual Studio)
-.vs/
-.vscode/
-.cache/
-.github/
-bin/
-obj/
+# =========================
+# CMake & Build
+# =========================
 build/
+compile_commands.json
+
+# =========================
+# Visual Studio Cache & Settings
+# =========================
+.vs/
 CMakeSettings.json
+
+# =========================
+# Clangd / Editor Cache
+# =========================
+.cache/

@@ -1,0 +1,4 @@
+CompileFlags:
+  CompilationDatabase: build/
+  Remove: [-fsanitize=address, /fsanitize=address]
+    
