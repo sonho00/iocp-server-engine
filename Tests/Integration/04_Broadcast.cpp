@@ -22,7 +22,7 @@ TEST(BroadcastTest, BroadcastMessageToAllClients) {
 	EXPECT_TRUE(client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket2)));
 
 	size_t expectedSize =
-		sendPacket.header.size + sizeof(uint64_t);	// 세션 ID 추가
+		sendPacket.header.size + sizeof(recvPacket1.sessionHandle);
 	EXPECT_EQ(recvPacket1.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
 	EXPECT_EQ(recvPacket2.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
 	EXPECT_EQ(recvPacket1.header.size, expectedSize);
@@ -30,12 +30,12 @@ TEST(BroadcastTest, BroadcastMessageToAllClients) {
 	EXPECT_STREQ(recvPacket1.message, "Hello, everyone!");
 	EXPECT_STREQ(recvPacket2.message, "Hello, everyone!");
 
+	// 클라이언트 3을 논블로킹 모드로 설정
 	unsigned long mode = 1;
 	ioctlsocket(client3.socket_, FIONBIO, &mode);
 
+	// 클라이언트 3이 브로드캐스트 메시지를 받지 못하는지 확인
 	char test;
-	LOG_INFO(
-		"Attempting to receive from client3 (should fail due to non-blocking "
-		"mode)...");
+	LOG_INFO("Checking that client3 does not receive the broadcast message...");
 	EXPECT_FALSE(client3.ReceiveByte(&test, 1));
 }

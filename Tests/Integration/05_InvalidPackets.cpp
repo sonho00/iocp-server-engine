@@ -15,13 +15,17 @@ TEST(InvalidPackets, InvalidHeader) {
 
 	char buffer[1024];
 
-	// 서버에서 잘못된 패킷 크기를 감지하여 연결을 종료할 것으로 예상
+	LOG_INFO(
+		"Checking that server detects invalid packet size and closes "
+		"connection...");
 	EXPECT_FALSE(client.ReceiveByte(buffer, sizeof(PACKET_HEADER)));
 
 	invalidHeader.size = sizeof(PACKET_HEADER);
 	invalidHeader.id = static_cast<uint16_t>(-1);  // Invalid packet ID
 	EXPECT_TRUE(client.SendByte((char*)&invalidHeader, sizeof(invalidHeader)));
 
-	// 서버에서 잘못된 패킷 ID를 감지하여 연결을 종료할 것으로 예상
+	LOG_INFO(
+		"Checking that server detects invalid packet ID and closes "
+		"connection...");
 	EXPECT_FALSE(client.ReceiveByte(buffer, sizeof(PACKET_HEADER)));
 }
