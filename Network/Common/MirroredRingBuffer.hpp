@@ -7,7 +7,7 @@
 
 class MirroredRingBuffer {
    public:
-	MirroredRingBuffer(size_t size = Config::kRecvBufferSize);
+	MirroredRingBuffer(size_t size = Config::kBufferSize);
 	~MirroredRingBuffer();
 
 	[[nodiscard]] char* GetBuffer() const { return buffer_; }
