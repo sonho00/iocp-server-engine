@@ -75,6 +75,10 @@ void PacketHandler::Execute(Session& session, const PACKET_HEADER& header) {
 	}
 }
 
+SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket() {
+	return packetPool_.Acquire();
+}
+
 bool PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
 	const auto* moveData = reinterpret_cast<const C2S_MOVE*>(&header);
 	S2C_MOVE movePacket{};

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "Config.hpp"
@@ -21,6 +22,8 @@ enum class PACKET_ID : uint8_t {
 	kLogout,
 	kCnt
 };
+
+using PacketBlock = std::array<char, Config::kMaxPacketSize>;
 
 // NOLINTBEGIN(readability-identifier-naming, modernize-avoid-c-arrays)
 #pragma pack(push, 1)

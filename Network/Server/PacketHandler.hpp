@@ -5,6 +5,8 @@
 #include <thread>
 #include <vector>
 
+#include "Network/Common/Config.hpp"
+#include "Network/Common/Pool/SparsePool.hpp"
 #include "Network/Common/Protocol.hpp"
 #include "TaskQueue.hpp"
 
@@ -22,6 +24,8 @@ class PacketHandler {
 	void PostTask(std::function<void()> task);
 	void Execute(Session& session, const PACKET_HEADER& header);
 
+	SharedPoolPtr<PacketBlock> AcquirePacket();
+
    private:
 	bool HandleMove(Session& session, const PACKET_HEADER& header);
 	bool HandleChat(Session& session, const PACKET_HEADER& header);
@@ -36,6 +40,8 @@ class PacketHandler {
 		handlers_;
 	std::vector<std::thread> workerThreads_;
 	TaskQueue taskQueue_;
+
+	SparsePool<PacketBlock, Config::kMaxPacketCount> packetPool_;
 
 	SessionManager* sessionManager_ = nullptr;
 	AccountManager* accountManager_ = nullptr;
