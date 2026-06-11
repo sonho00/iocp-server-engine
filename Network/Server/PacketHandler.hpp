@@ -24,6 +24,7 @@ class PacketHandler {
 	void PostTask(std::function<void()> task);
 	void Execute(Session& session, const PACKET_HEADER& header);
 
+	SharedPoolPtr<PacketBlock> AcquirePacket(const PACKET_HEADER& header);
 	SharedPoolPtr<PacketBlock> AcquirePacket();
 
    private:

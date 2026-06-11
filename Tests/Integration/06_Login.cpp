@@ -4,117 +4,117 @@
 #include "Network/Common/Protocol.hpp"
 #include "Tests/Base/Client.hpp"
 
-void CreateC2SRegisterPacket(C2S_REGISTER& packet, const char* id,
-							 const char* password) {
+PacketBlock CreateRegisterPacket(const char* id, const char* password) {
+	PacketBlock buffer{};
+	auto& packet = reinterpret_cast<C2S_REGISTER&>(*buffer.data());
 	packet.header.size = sizeof(C2S_REGISTER);
 	packet.header.id = static_cast<uint8_t>(PACKET_ID::kRegister);
 	strncpy_s(packet.id, sizeof(packet.id), id, _TRUNCATE);
 	strncpy_s(packet.password, sizeof(packet.password), password, _TRUNCATE);
+	return buffer;
 }
 
-void CreateC2SLoginPacket(C2S_LOGIN& packet, const char* id,
-						  const char* password) {
+PacketBlock CreateLoginPacket(const char* id, const char* password) {
+	PacketBlock buffer{};
+	auto& packet = reinterpret_cast<C2S_LOGIN&>(*buffer.data());
 	packet.header.size = sizeof(C2S_LOGIN);
 	packet.header.id = static_cast<uint8_t>(PACKET_ID::kLogin);
 	strncpy_s(packet.id, sizeof(packet.id), id, _TRUNCATE);
 	strncpy_s(packet.password, sizeof(packet.password), password, _TRUNCATE);
+	return buffer;
 }
 
-void CreateC2SLogoutPacket(C2S_LOGOUT& packet) {
+PacketBlock CreateLogoutPacket() {
+	PacketBlock buffer{};
+	auto& packet = reinterpret_cast<C2S_LOGOUT&>(*buffer.data());
 	packet.header.size = sizeof(C2S_LOGOUT);
 	packet.header.id = static_cast<uint8_t>(PACKET_ID::kLogout);
+	return buffer;
 }
 
-void CheckS2CRegisterPacket(S2C_REGISTER& packet, bool success,
-							const char* message) {
+void CheckRegisterPacket(S2C_REGISTER& packet, bool success,
+						 const char* message) {
 	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kRegister));
-	EXPECT_EQ(packet.header.size, sizeof(S2C_REGISTER));
+	EXPECT_EQ(packet.header.size, sizeof(S2C_REGISTER) + strlen(message) + 1);
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);
 }
 
-void CheckS2CLoginPacket(S2C_LOGIN& packet, bool success, const char* message) {
+void CheckLoginPacket(S2C_LOGIN& packet, bool success, const char* message) {
 	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kLogin));
-	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGIN));
+	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGIN) + strlen(message) + 1);
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);
 }
 
-void CheckS2CLogoutPacket(S2C_LOGOUT& packet, bool success,
-						  const char* message) {
+void CheckLogoutPacket(S2C_LOGOUT& packet, bool success, const char* message) {
 	EXPECT_EQ(packet.header.id, static_cast<uint16_t>(PACKET_ID::kLogout));
-	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGOUT));
+	EXPECT_EQ(packet.header.size, sizeof(S2C_LOGOUT) + strlen(message) + 1);
 	EXPECT_EQ(packet.success, success);
 	EXPECT_STREQ(packet.message, message);
 }
 
 void Test1(Client& client1, Client& client2) {
-	C2S_REGISTER sendRegisterPacket{};
-	CreateC2SRegisterPacket(sendRegisterPacket, "test_user1", "test_pass1");
-	EXPECT_TRUE(client1.SendPacket(
-		reinterpret_cast<const PACKET_HEADER&>(sendRegisterPacket)));
-
-	S2C_REGISTER recvRegisterPacket1{};
+	PacketBlock sendPacket = CreateRegisterPacket("test_user1", "test_pass1");
 	EXPECT_TRUE(
-		client1.ReceivePacket(reinterpret_cast<char*>(&recvRegisterPacket1)));
-	CheckS2CRegisterPacket(recvRegisterPacket1, true,
-						   "Registration successful");
+		client1.SendPacket(reinterpret_cast<const PACKET_HEADER&>(sendPacket)));
+
+	PacketBlock buffer{};
+	auto& recvPacket = reinterpret_cast<S2C_REGISTER&>(*buffer.data());
+	EXPECT_TRUE(client1.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+	CheckRegisterPacket(recvPacket, true, "Registration successful");
 
 	LOG_INFO("Test 1 passed: Registration successful");
 }
 
 void Test2(Client& client1, Client& client2) {
-	C2S_REGISTER sendRegisterPacket{};
-	CreateC2SRegisterPacket(sendRegisterPacket, "test_user1", "test_pass2");
-	EXPECT_TRUE(client2.SendPacket(
-		reinterpret_cast<const PACKET_HEADER&>(sendRegisterPacket)));
-
-	S2C_REGISTER recvRegisterPacket{};
+	PacketBlock sendPacket = CreateRegisterPacket("test_user1", "test_pass2");
 	EXPECT_TRUE(
-		client2.ReceivePacket(reinterpret_cast<char*>(&recvRegisterPacket)));
-	CheckS2CRegisterPacket(recvRegisterPacket, false, "ID already exists");
+		client2.SendPacket(reinterpret_cast<const PACKET_HEADER&>(sendPacket)));
+
+	PacketBlock buffer{};
+	auto& recvPacket = reinterpret_cast<S2C_REGISTER&>(*buffer.data());
+	EXPECT_TRUE(client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+	CheckRegisterPacket(recvPacket, false, "ID already exists");
 
 	LOG_INFO("Test 2 passed: Duplicate registration handled");
 }
 
 void Test3(Client& client1, Client& client2) {
-	C2S_LOGIN sendLoginPacket{};
-	CreateC2SLoginPacket(sendLoginPacket, "test_user1", "test_pass2");
-	EXPECT_TRUE(client1.SendPacket(
-		reinterpret_cast<const PACKET_HEADER&>(sendLoginPacket)));
-
-	S2C_LOGIN recvLoginPacket{};
+	PacketBlock sendPacket = CreateLoginPacket("test_user1", "test_pass2");
 	EXPECT_TRUE(
-		client1.ReceivePacket(reinterpret_cast<char*>(&recvLoginPacket)));
-	CheckS2CLoginPacket(recvLoginPacket, false, "Invalid credentials");
+		client1.SendPacket(reinterpret_cast<const PACKET_HEADER&>(sendPacket)));
+
+	PacketBlock buffer{};
+	auto& recvPacket = reinterpret_cast<S2C_LOGIN&>(*buffer.data());
+	EXPECT_TRUE(client1.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+	CheckLoginPacket(recvPacket, false, "Invalid credentials");
 
 	LOG_INFO("Test 3 passed: Login with incorrect credentials handled");
 }
 
 void Test4(Client& client1, Client& client2) {
-	C2S_LOGIN sendLoginPacket{};
-	CreateC2SLoginPacket(sendLoginPacket, "test_user1", "test_pass1");
-	EXPECT_TRUE(client1.SendPacket(
-		reinterpret_cast<const PACKET_HEADER&>(sendLoginPacket)));
-
-	S2C_LOGIN recvLoginPacket{};
+	PacketBlock sendPacket = CreateLoginPacket("test_user1", "test_pass1");
 	EXPECT_TRUE(
-		client1.ReceivePacket(reinterpret_cast<char*>(&recvLoginPacket)));
-	CheckS2CLoginPacket(recvLoginPacket, true, "Login successful");
+		client1.SendPacket(reinterpret_cast<const PACKET_HEADER&>(sendPacket)));
+
+	PacketBlock buffer{};
+	auto& recvPacket = reinterpret_cast<S2C_LOGIN&>(*buffer.data());
+	EXPECT_TRUE(client1.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+	CheckLoginPacket(recvPacket, true, "Login successful");
 
 	LOG_INFO("Test 4 passed: Login with correct credentials handled");
 }
 
 void Test5(Client& client1, Client& client2) {
-	C2S_LOGOUT sendLogoutPacket{};
-	CreateC2SLogoutPacket(sendLogoutPacket);
-	EXPECT_TRUE(client1.SendPacket(
-		reinterpret_cast<const PACKET_HEADER&>(sendLogoutPacket)));
-
-	S2C_LOGOUT recvLogoutPacket{};
+	PacketBlock sendPacket = CreateLogoutPacket();
 	EXPECT_TRUE(
-		client1.ReceivePacket(reinterpret_cast<char*>(&recvLogoutPacket)));
-	CheckS2CLogoutPacket(recvLogoutPacket, true, "Logout successful");
+		client1.SendPacket(reinterpret_cast<const PACKET_HEADER&>(sendPacket)));
+
+	PacketBlock buffer{};
+	auto& recvPacket = reinterpret_cast<S2C_LOGOUT&>(*buffer.data());
+	EXPECT_TRUE(client1.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+	CheckLogoutPacket(recvPacket, true, "Logout successful");
 
 	LOG_INFO("Test 5 passed: Logout handled");
 }

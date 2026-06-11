@@ -10,7 +10,8 @@ TEST(StickyPacketsTest, VerifyDataIntegrity) {
 	client1.Init();
 	client2.Init();
 
-	C2S_CHAT sendPacket;
+	std::array<char, Config::kMaxPacketSize> sendBuffer{};
+	auto& sendPacket = reinterpret_cast<C2S_CHAT&>(*sendBuffer.data());
 	sendPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	for (int i = 0; i < 200; ++i) {
 		sprintf_s(sendPacket.message + i * 4, 5, "%03d ", i);
@@ -23,7 +24,8 @@ TEST(StickyPacketsTest, VerifyDataIntegrity) {
 	}
 	EXPECT_TRUE(client1.SendByte(sendBuf.data(), 805 * 200));
 
-	S2C_CHAT recvPacket;
+	std::array<char, Config::kMaxPacketSize> recvBuffer{};
+	auto& recvPacket = reinterpret_cast<S2C_CHAT&>(*recvBuffer.data());
 	for (int i = 0; i < 200; ++i) {
 		EXPECT_TRUE(
 			client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));

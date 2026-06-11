@@ -8,7 +8,8 @@ TEST(FragmentationTest, HandleFragmentedPacket) {
 	client1.Init();
 	client2.Init();
 
-	C2S_CHAT sendPacket;
+	PacketBlock sendBuffer{};
+	auto& sendPacket = reinterpret_cast<C2S_CHAT&>(*sendBuffer.data());
 	sendPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sendPacket.header.size = 805;
 	for (int i = 0; i < 200; ++i) {
@@ -20,7 +21,8 @@ TEST(FragmentationTest, HandleFragmentedPacket) {
 			client1.SendByte(reinterpret_cast<char*>(&sendPacket) + i, 1));
 	}
 
-	S2C_CHAT recvPacket;
+	PacketBlock recvBuffer{};
+	auto& recvPacket = reinterpret_cast<S2C_CHAT&>(*recvBuffer.data());
 	EXPECT_TRUE(client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
 	EXPECT_EQ(recvPacket.header.id, static_cast<uint16_t>(PACKET_ID::kChat));
 	EXPECT_EQ(recvPacket.header.size,

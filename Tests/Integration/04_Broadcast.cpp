@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <string.h>
 
+#include "Network/Common/Protocol.hpp"
 #include "Tests/Base/Client.hpp"
 
 TEST(BroadcastTest, BroadcastMessageToAllClients) {
@@ -9,15 +10,20 @@ TEST(BroadcastTest, BroadcastMessageToAllClients) {
 	client2.Init();
 	client3.Init();
 
-	C2S_CHAT sendPacket;
-	strcpy_s(sendPacket.message, "Hello, everyone!");
+	PacketBlock sendBuffer{};
+	auto& sendPacket = reinterpret_cast<C2S_CHAT&>(*sendBuffer.data());
+	const char* testMessage = "Hello, everyone!";
+	size_t messageLength = strlen(testMessage) + 1;
+	strcpy_s(sendPacket.message, messageLength, testMessage);
 	sendPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sendPacket.header.size =
 		sizeof(sendPacket.header) + strlen(sendPacket.message) + 1;
 	EXPECT_TRUE(client3.SendByte(reinterpret_cast<char*>(&sendPacket),
 								 sendPacket.header.size));
 
-	S2C_CHAT recvPacket1, recvPacket2;
+	PacketBlock recvBuffer1{}, recvBuffer2{};
+	auto& recvPacket1 = reinterpret_cast<S2C_CHAT&>(*recvBuffer1.data());
+	auto& recvPacket2 = reinterpret_cast<S2C_CHAT&>(*recvBuffer2.data());
 	EXPECT_TRUE(client1.ReceivePacket(reinterpret_cast<char*>(&recvPacket1)));
 	EXPECT_TRUE(client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket2)));
 

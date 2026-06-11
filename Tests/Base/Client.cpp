@@ -61,7 +61,8 @@ int Client::Connect() {
 }
 
 void Client::ReceiveWelcomePacket() {
-	S2C_CHAT welcomePacket{};
+	PacketBlock recvBuffer{};
+	auto& welcomePacket = reinterpret_cast<S2C_CHAT&>(*recvBuffer.data());
 	if (!ReceivePacket(reinterpret_cast<char*>(&welcomePacket))) {
 		LOG_ERROR("Failed to receive welcome packet from server.");
 		return;
