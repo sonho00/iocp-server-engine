@@ -28,15 +28,15 @@ class PacketHandler {
 	SharedPoolPtr<PacketBlock> AcquirePacket();
 
    private:
-	bool HandleMove(Session& session, const PACKET_HEADER& header);
-	bool HandleChat(Session& session, const PACKET_HEADER& header);
-	bool HandleRegister(Session& session, const PACKET_HEADER& header);
-	bool HandleLogin(Session& session, const PACKET_HEADER& header);
-	bool HandleLogout(Session& session, const PACKET_HEADER& header);
+	void HandleMove(Session& session, const PACKET_HEADER& header);
+	void HandleChat(Session& session, const PACKET_HEADER& header);
+	void HandleRegister(Session& session, const PACKET_HEADER& header);
+	void HandleLogin(Session& session, const PACKET_HEADER& header);
+	void HandleLogout(Session& session, const PACKET_HEADER& header);
 
 	void WorkerThreadFunc();
 
-	std::array<std::function<bool(Session&, const PACKET_HEADER&)>,
+	std::array<std::function<void(Session&, const PACKET_HEADER&)>,
 			   static_cast<size_t>(PACKET_ID::kCnt)>
 		handlers_;
 	std::vector<std::thread> workerThreads_;

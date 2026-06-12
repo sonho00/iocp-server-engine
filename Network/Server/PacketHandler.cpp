@@ -18,23 +18,23 @@ PacketHandler::PacketHandler(SessionManager* sessionManager,
 	: sessionManager_(sessionManager), accountManager_(accountManager) {
 	handlers_[static_cast<size_t>(PACKET_ID::kMove)] =
 		[this](Session& session, const PACKET_HEADER& header) {
-			return HandleMove(session, header);
+			HandleMove(session, header);
 		};
 	handlers_[static_cast<size_t>(PACKET_ID::kChat)] =
 		[this](Session& session, const PACKET_HEADER& header) {
-			return HandleChat(session, header);
+			HandleChat(session, header);
 		};
 	handlers_[static_cast<size_t>(PACKET_ID::kRegister)] =
 		[this](Session& session, const PACKET_HEADER& header) {
-			return HandleRegister(session, header);
+			HandleRegister(session, header);
 		};
 	handlers_[static_cast<size_t>(PACKET_ID::kLogin)] =
 		[this](Session& session, const PACKET_HEADER& header) {
-			return HandleLogin(session, header);
+			HandleLogin(session, header);
 		};
 	handlers_[static_cast<size_t>(PACKET_ID::kLogout)] =
 		[this](Session& session, const PACKET_HEADER& header) {
-			return HandleLogout(session, header);
+			HandleLogout(session, header);
 		};
 
 	workerThreads_.reserve(Config::kWorkerThreadCount);
@@ -74,10 +74,7 @@ void PacketHandler::Execute(Session& session, const PACKET_HEADER& header) {
 	auto& packetHeader = reinterpret_cast<PACKET_HEADER&>(*packet->data());
 	std::memcpy(&packetHeader, &header, header.size);
 
-	if (!handler(session, header)) {
-		LOG_ERROR("[Session:{}] Failed to handle packet ID: {}",
-				  session.GetHandle(), header.id);
-	}
+	handler(session, packetHeader);
 }
 
 SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket(
@@ -96,7 +93,7 @@ SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket() {
 	return packetPool_.Acquire();
 }
 
-bool PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
+void PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
 	const auto& moveData = reinterpret_cast<const C2S_MOVE&>(header);
 	SharedPoolPtr<PacketBlock> packet = AcquirePacket();
 	auto& movePacket = reinterpret_cast<S2C_MOVE&>(*packet->data());
@@ -106,16 +103,12 @@ bool PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
 	movePacket.x = moveData.x;
 	movePacket.y = moveData.y;
 
-	if (!sessionManager_->Broadcast(
-			reinterpret_cast<const PACKET_HEADER&>(movePacket),
-			session.GetHandle())) {
-		LOG_ERROR("Failed to broadcast MOVE packet");
-		return false;
-	}
-	return true;
+	sessionManager_->Broadcast(
+		reinterpret_cast<const PACKET_HEADER&>(movePacket),
+		session.GetHandle());
 }
 
-bool PacketHandler::HandleChat(Session& session, const PACKET_HEADER& header) {
+void PacketHandler::HandleChat(Session& session, const PACKET_HEADER& header) {
 	SharedPoolPtr<PacketBlock> packet = AcquirePacket();
 	auto& chatPacket = reinterpret_cast<S2C_CHAT&>(*packet->data());
 	chatPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
@@ -125,16 +118,12 @@ bool PacketHandler::HandleChat(Session& session, const PACKET_HEADER& header) {
 				reinterpret_cast<const char*>(&header) + sizeof(PACKET_HEADER),
 				header.size - sizeof(PACKET_HEADER));
 
-	if (!sessionManager_->Broadcast(
-			reinterpret_cast<const PACKET_HEADER&>(chatPacket),
-			session.GetHandle())) {
-		LOG_ERROR("Failed to broadcast CHAT packet");
-		return false;
-	}
-
-	return true;
+	sessionManager_->Broadcast(
+		reinterpret_cast<const PACKET_HEADER&>(chatPacket),
+		session.GetHandle());
 }
-bool PacketHandler::HandleRegister(Session& session,
+
+void PacketHandler::HandleRegister(Session& session,
 								   const PACKET_HEADER& header) {
 	const auto& registerData = reinterpret_cast<const C2S_REGISTER&>(header);
 
@@ -150,7 +139,6 @@ bool PacketHandler::HandleRegister(Session& session,
 	SharedPoolPtr<PacketBlock> packet = AcquirePacket();
 	auto& response = reinterpret_cast<S2C_REGISTER&>(*packet->data());
 	response.header.id = static_cast<uint16_t>(PACKET_ID::kRegister);
-	response.header.size = sizeof(S2C_REGISTER);
 	response.success = success;
 	const char* resultMessage =
 		success ? "Registration successful" : "ID already exists";
@@ -159,15 +147,10 @@ bool PacketHandler::HandleRegister(Session& session,
 			  messageLength - 1);
 	response.header.size = sizeof(S2C_REGISTER) + messageLength;
 
-	if (!session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response))) {
-		LOG_ERROR("Failed to send REGISTER response");
-		return false;
-	}
-
-	return true;
+	session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response));
 }
 
-bool PacketHandler::HandleLogin(Session& session, const PACKET_HEADER& header) {
+void PacketHandler::HandleLogin(Session& session, const PACKET_HEADER& header) {
 	const auto& loginData = reinterpret_cast<const C2S_LOGIN&>(header);
 
 	size_t idLength = strnlen(loginData.id, Config::kIdLength);
@@ -188,20 +171,14 @@ bool PacketHandler::HandleLogin(Session& session, const PACKET_HEADER& header) {
 	strncpy_s(response.message, messageLength, resultMessage,
 			  messageLength - 1);
 	response.header.size = sizeof(S2C_LOGIN) + messageLength;
-	if (!session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response))) {
-		LOG_ERROR("Failed to send LOGIN response");
-		return false;
-	}
-
-	return true;
+	session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response));
 }
 
-bool PacketHandler::HandleLogout(Session& session,
+void PacketHandler::HandleLogout(Session& session,
 								 [[maybe_unused]] const PACKET_HEADER& header) {
 	SharedPoolPtr<PacketBlock> packet = AcquirePacket();
 	auto& response = reinterpret_cast<S2C_LOGOUT&>(*packet->data());
 	response.header.id = static_cast<uint16_t>(PACKET_ID::kLogout);
-	response.header.size = sizeof(S2C_LOGOUT);
 	response.success = true;
 	const char* resultMessage = "Logout successful";
 	size_t messageLength = strlen(resultMessage) + 1;
@@ -209,14 +186,9 @@ bool PacketHandler::HandleLogout(Session& session,
 			  messageLength - 1);
 	response.header.size = sizeof(S2C_LOGOUT) + messageLength;
 
-	if (!session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response))) {
-		LOG_ERROR("Failed to send LOGOUT response");
-		return false;
-	}
+	session.SendPacket(reinterpret_cast<const PACKET_HEADER&>(response));
 
 	sessionManager_->LogOutSession(session.GetHandle());
-
-	return true;
 }
 
 void PacketHandler::WorkerThreadFunc() {
