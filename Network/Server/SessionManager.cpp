@@ -22,8 +22,7 @@ bool SessionManager::Init(IocpCore& iocpCore, Listener& listener,
 	packetHandler_ = &packetHandler;
 	sessionPool_.SetPostReleaseFunc([&listener] { listener.PostAccept(); });
 
-	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
-		static_cast<size_t>(SessionState::kIdle));
+	std::vector<uint64_t> handles = GetSessionsInState(SessionState::kIdle);
 
 	return std::ranges::all_of(handles, [this](uint64_t handle) {
 		Session* sessionPtr = sessionPool_.GetObj(handle);
@@ -71,23 +70,6 @@ void SessionManager::DisconnectSession(uint64_t handle) {
 	sessionPtrs_[idx].Reset();
 }
 
-bool SessionManager::SendToSession(uint64_t handle,
-								   const PACKET_HEADER& header) {
-	auto idx = static_cast<uint32_t>(handle);
-	return sessionPtrs_[idx]->SendPacket(header);
-}
-
-bool SessionManager::Broadcast(const PACKET_HEADER& header,
-							   uint64_t sessionHandle) {
-	std::vector<uint64_t> handles = sessionPool_.GetIndicesInState(
-		static_cast<size_t>(SessionState::kConnected));
-
-	return std::ranges::all_of(
-		handles, [this, sessionHandle, &header](uint64_t handle) {
-			return handle == sessionHandle || SendToSession(handle, header);
-		});
-}
-
 bool SessionManager::LogInSession(uint64_t handle, const Account& account) {
 	int64_t result = accountManager_->Authenticate(account);
 	auto idx = static_cast<uint32_t>(handle);
@@ -105,6 +87,10 @@ bool SessionManager::LogOutSession(uint64_t handle) {
 SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	return sessionPtrs_[idx];
+}
+
+std::vector<uint64_t> SessionManager::GetSessionsInState(SessionState state) {
+	return sessionPool_.GetIndicesInState(static_cast<size_t>(state));
 }
 
 SessionState SessionManager::GetState(uint64_t handle) {

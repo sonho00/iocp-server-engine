@@ -77,20 +77,30 @@ void PacketHandler::Execute(Session& session, const PACKET_HEADER& header) {
 	handler(session, packetHeader);
 }
 
-SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket(
-	const PACKET_HEADER& header) {
-	SharedPoolPtr<PacketBlock> block = packetPool_.Acquire();
-	if (!block.IsValid()) {
-		LOG_WARN("Failed to acquire packet block from pool");
-		return block;
-	}
-	auto& packetHeader = reinterpret_cast<PACKET_HEADER&>(*block->data());
-	std::memcpy(&packetHeader, &header, header.size);
-	return block;
-}
-
 SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket() {
 	return packetPool_.Acquire();
+}
+
+SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket(const PACKET_HEADER& header) {
+	auto packet = packetPool_.Acquire();
+	std::memcpy(packet->data(), &header, header.size);
+	return packet;
+}
+
+void PacketHandler::SendToSession(uint64_t sessionHandle, const PACKET_HEADER& header) {
+	auto session = sessionManager_->GetSession(sessionHandle);
+	if (session.IsValid()) {
+		session->SendPacket(header);
+	}
+}
+
+void PacketHandler::Broadcast(uint64_t sessionHandle, const PACKET_HEADER& header) {
+	auto sessions = sessionManager_->GetSessionsInState(SessionState::kConnected);
+	for (uint64_t handle : sessions) {
+		if (handle != sessionHandle) {
+			SendToSession(handle, header);
+		}
+	}
 }
 
 void PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
@@ -103,9 +113,7 @@ void PacketHandler::HandleMove(Session& session, const PACKET_HEADER& header) {
 	movePacket.x = moveData.x;
 	movePacket.y = moveData.y;
 
-	sessionManager_->Broadcast(
-		reinterpret_cast<const PACKET_HEADER&>(movePacket),
-		session.GetHandle());
+	Broadcast(session.GetHandle(), movePacket.header);
 }
 
 void PacketHandler::HandleChat(Session& session, const PACKET_HEADER& header) {
@@ -118,9 +126,7 @@ void PacketHandler::HandleChat(Session& session, const PACKET_HEADER& header) {
 				reinterpret_cast<const char*>(&header) + sizeof(PACKET_HEADER),
 				header.size - sizeof(PACKET_HEADER));
 
-	sessionManager_->Broadcast(
-		reinterpret_cast<const PACKET_HEADER&>(chatPacket),
-		session.GetHandle());
+	Broadcast(session.GetHandle(), chatPacket.header);
 }
 
 void PacketHandler::HandleRegister(Session& session,
