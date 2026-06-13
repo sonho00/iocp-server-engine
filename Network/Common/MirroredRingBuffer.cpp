@@ -1,8 +1,8 @@
-#include "MagicBuffer.hpp"
+#include "MirroredRingBuffer.hpp"
 
 #include "Logger.hpp"
 
-MagicBuffer::MagicBuffer(size_t size) : size_(size) {
+MirroredRingBuffer::MirroredRingBuffer(size_t size) : size_(size) {
 	SYSTEM_INFO sysInfo;
 	GetSystemInfo(&sysInfo);
 	if (size_ % sysInfo.dwAllocationGranularity != 0) {
@@ -47,7 +47,7 @@ MagicBuffer::MagicBuffer(size_t size) : size_(size) {
 	}
 }
 
-MagicBuffer::~MagicBuffer() {
+MirroredRingBuffer::~MirroredRingBuffer() {
 	if (buffer_ != nullptr) {
 		UnmapViewOfFile(buffer_);
 		UnmapViewOfFile(buffer_ + size_);

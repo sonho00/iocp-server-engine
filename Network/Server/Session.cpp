@@ -13,8 +13,7 @@
 #include "ServerUtils.hpp"
 #include "SessionManager.hpp"
 
-Session::Session()
-	: readOv_(Config::kMagicBufferSize), writeOv_(Config::kMagicBufferSize) {
+Session::Session() {
 	socket_ = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
 						WSA_FLAG_OVERLAPPED);
 	if (socket_ == INVALID_SOCKET) {
@@ -92,9 +91,12 @@ bool Session::OnRead(DWORD bytesTransferred) {
 
 		if (availableData < header->size) break;
 
-		packetHandler_->PostTask(
-			[this, header]() { packetHandler_->Execute(*this, *header); });
-
+		SharedPoolPtr<PacketBlock> packet =
+			packetHandler_->AcquirePacket(*header);
+		packetHandler_->PostTask([this, packet = std::move(packet)]() mutable {
+			auto& header = reinterpret_cast<PACKET_HEADER&>(*packet->data());
+			packetHandler_->Execute(*this, header);
+		});
 		LOG_DEBUG("[Session:{}] Processed packet ID: {}, Size: {}", handle_,
 				  static_cast<uint16_t>(header->id), header->size);
 
@@ -221,7 +223,8 @@ bool Session::Connect() {
 		}
 	}
 
-	S2C_CHAT welcomePacket{};
+	SharedPoolPtr<PacketBlock> packet = packetHandler_->AcquirePacket();
+	auto& welcomePacket = reinterpret_cast<S2C_CHAT&>(*packet->data());
 	welcomePacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
 	sprintf(welcomePacket.message, "%lld", handle_);
 	welcomePacket.header.size =

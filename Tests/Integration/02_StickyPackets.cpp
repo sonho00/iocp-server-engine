@@ -10,33 +10,29 @@ TEST(StickyPacketsTest, VerifyDataIntegrity) {
 	client1.Init();
 	client2.Init();
 
-	std::array<char, 76000> sendBuf{};
-	std::array<char, 76000> recvBuf{};
-	auto* sendHeader = reinterpret_cast<PACKET_HEADER*>(sendBuf.data());
-
-	sendHeader->size = 25004;
-	sendHeader->id = static_cast<uint16_t>(PACKET_ID::kChat);
-
-	for (int i = 0; i < 5000; ++i) {
-		sprintf_s(sendBuf.data() + sizeof(PACKET_HEADER) + i * 5, 6, "%04d ",
-				  i);
+	std::array<char, Config::kMaxPacketSize> sendBuffer{};
+	auto& sendPacket = reinterpret_cast<C2S_CHAT&>(*sendBuffer.data());
+	sendPacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
+	for (int i = 0; i < 200; ++i) {
+		sprintf_s(sendPacket.message + i * 4, 5, "%03d ", i);
 	}
+	sendPacket.header.size = 805;
 
-	memcpy(sendBuf.data() + 25004, sendBuf.data(), 25004);
-	memcpy(sendBuf.data() + 50008, sendBuf.data(), 25004);
+	std::array<char, 805 * 200> sendBuf{};
+	for (int i = 0; i < 200; ++i) {
+		memcpy(sendBuf.data() + i * 805, &sendPacket, 805);
+	}
+	EXPECT_TRUE(client1.SendByte(sendBuf.data(), 805 * 200));
 
-	EXPECT_TRUE(client1.SendByte(sendBuf.data(), 75012));
-	EXPECT_TRUE(client2.ReceiveByte(recvBuf.data(), 75036));
-
-	for (int i = 0; i < 3; ++i) {
-		auto* recvHeader =
-			reinterpret_cast<PACKET_HEADER*>(recvBuf.data() + i * 25012);
-		EXPECT_EQ(recvHeader->id, static_cast<uint16_t>(PACKET_ID::kChat));
-		EXPECT_EQ(recvHeader->size, 25012);
-
-		EXPECT_EQ(memcmp(recvBuf.data() + i * 25012 + sizeof(PACKET_HEADER) +
-							 sizeof(uint64_t),
-						 sendBuf.data() + sizeof(PACKET_HEADER), 25000),
-				  0);
+	std::array<char, Config::kMaxPacketSize> recvBuffer{};
+	auto& recvPacket = reinterpret_cast<S2C_CHAT&>(*recvBuffer.data());
+	for (int i = 0; i < 200; ++i) {
+		EXPECT_TRUE(
+			client2.ReceivePacket(reinterpret_cast<char*>(&recvPacket)));
+		EXPECT_EQ(recvPacket.header.id,
+				  static_cast<uint16_t>(PACKET_ID::kChat));
+		EXPECT_EQ(recvPacket.header.size,
+				  805 + sizeof(recvPacket.sessionHandle));
+		EXPECT_EQ(memcmp(recvPacket.message, sendPacket.message, 800), 0);
 	}
 }

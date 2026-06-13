@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 
 #include "Config.hpp"
@@ -21,6 +22,8 @@ enum class PACKET_ID : uint8_t {
 	kLogout,
 	kCnt
 };
+
+using PacketBlock = std::array<char, Config::kMaxPacketSize>;
 
 // NOLINTBEGIN(readability-identifier-naming, modernize-avoid-c-arrays)
 #pragma pack(push, 1)
@@ -45,13 +48,13 @@ struct S2C_MOVE {
 
 struct C2S_CHAT {
 	PACKET_HEADER header;
-	char message[Config::kChatPacketSize];
+	char message[0];
 };
 
 struct S2C_CHAT {
 	PACKET_HEADER header;
 	uint64_t sessionHandle;
-	char message[Config::kChatPacketSize];
+	char message[0];
 };
 
 struct C2S_REGISTER {
@@ -63,7 +66,7 @@ struct C2S_REGISTER {
 struct S2C_REGISTER {
 	PACKET_HEADER header;
 	bool success;
-	char message[Config::kChatPacketSize];
+	char message[0];
 };
 
 struct C2S_LOGIN {
@@ -75,7 +78,7 @@ struct C2S_LOGIN {
 struct S2C_LOGIN {
 	PACKET_HEADER header;
 	bool success;
-	char message[Config::kChatPacketSize];
+	char message[0];
 };
 
 struct C2S_LOGOUT {
@@ -85,7 +88,7 @@ struct C2S_LOGOUT {
 struct S2C_LOGOUT {
 	PACKET_HEADER header;
 	bool success;
-	char message[Config::kChatPacketSize];
+	char message[0];
 };
 
 #pragma pack(pop)

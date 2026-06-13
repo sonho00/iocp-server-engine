@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <vector>
 
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Pool/SparsePool.hpp"
@@ -22,13 +23,11 @@ class SessionManager {
 	bool ConnectSession(uint64_t handle);
 	void DisconnectSession(uint64_t handle);
 
-	bool SendToSession(uint64_t handle, const PACKET_HEADER& header);
-	bool Broadcast(const PACKET_HEADER& header, uint64_t sessionHandle);
-
 	bool LogInSession(uint64_t handle, const Account& account);
 	bool LogOutSession(uint64_t handle);
 
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
+	std::vector<uint64_t> GetSessionsInState(SessionState state);
 
 	SessionState GetState(uint64_t handle);
 	bool SetState(uint64_t handle, SessionState newState);

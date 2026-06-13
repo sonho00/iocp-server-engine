@@ -3,14 +3,15 @@
 #include <WinSock2.h>
 #include <minwinbase.h>
 
-#include "Network/Common/MagicBuffer.hpp"
+#include "Network/Common/Config.hpp"
+#include "Network/Common/MirroredRingBuffer.hpp"
 #include "Network/Common/Pool/SharedPoolPtr.hpp"
 #include "Network/Common/Protocol.hpp"
 
 class Session;
 
 struct OverlappedEx {
-	OverlappedEx(size_t bufferSize = Config::kMagicBufferSize)
+	OverlappedEx(size_t bufferSize = Config::kBufferSize)
 		: buffer_(bufferSize) {}
 
 	void Init() { Reset(); }
@@ -29,7 +30,7 @@ struct OverlappedEx {
 	IO_TYPE ioType_ = IO_TYPE::kNone;
 
 	WSABUF wsaBuf_ = {};
-	MagicBuffer buffer_;
+	MirroredRingBuffer buffer_;
 	SharedPoolPtr<Session> sessionPtr_ = nullptr;
 
 	size_t readPos_ = 0;
