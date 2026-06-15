@@ -29,7 +29,7 @@ class Session {
 
 	void Init();
 
-	bool RegisterRead();
+	bool RegisterRecv();
 	bool SendPacket(const PACKET_HEADER& header);
 
 	bool HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred);
@@ -46,14 +46,14 @@ class Session {
 	[[nodiscard]] Listener* GetListener() const { return listener_; }
 	void SetListener(Listener* listener) { listener_ = listener; }
 
-	OverlappedEx readOv_;
+	OverlappedEx recvOv_;
 	OverlappedEx writeOv_;
 	OverlappedEx disconnectOv_;
 
    private:
 	bool RegisterWriteInternal();
 
-	bool OnRead(DWORD bytesTransferred);
+	bool OnRecv(DWORD bytesTransferred);
 	bool OnWrite(DWORD bytesTransferred);
 
 	SOCKET socket_ = INVALID_SOCKET;

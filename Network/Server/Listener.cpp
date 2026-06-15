@@ -95,7 +95,7 @@ bool Listener::PostAccept() {
 		}
 
 		if (!pendingAccepts_.compare_exchange_weak(current, current + 1,
-													 std::memory_order_relaxed))
+												   std::memory_order_relaxed))
 			continue;
 
 		SharedPoolPtr<Session> sessionPtr = sessionManager_.CreateSession();
@@ -120,19 +120,19 @@ bool Listener::PostAccept() {
 
 // NOLINTNEXTLINE readability-make-member-function-const
 bool Listener::RegisterAccept(SharedPoolPtr<Session>& sessionPtr) {
-	sessionPtr->readOv_.ioType_ = IO_TYPE::kAccept;
-	sessionPtr->readOv_.wsaBuf_.buf = sessionPtr->readOv_.buffer_.GetBuffer();
-	sessionPtr->readOv_.wsaBuf_.len =
-		static_cast<ULONG>(sessionPtr->readOv_.buffer_.GetSize());
-	ZeroMemory(&sessionPtr->readOv_.overlapped_, sizeof(OVERLAPPED));
-	sessionPtr->readOv_.sessionPtr_ = sessionPtr;
+	sessionPtr->recvOv_.ioType_ = IO_TYPE::kAccept;
+	sessionPtr->recvOv_.wsaBuf_.buf = sessionPtr->recvOv_.buffer_.GetBuffer();
+	sessionPtr->recvOv_.wsaBuf_.len =
+		static_cast<ULONG>(sessionPtr->recvOv_.buffer_.GetSize());
+	ZeroMemory(&sessionPtr->recvOv_.overlapped_, sizeof(OVERLAPPED));
+	sessionPtr->recvOv_.sessionPtr_ = sessionPtr;
 
 	DWORD bytesReceived = 0;
 	BOOL result =
 		ServerUtils::AcceptEx(socket_, sessionPtr->GetSocket(),
-							  sessionPtr->readOv_.buffer_.GetBuffer(), 0,
+							  sessionPtr->recvOv_.buffer_.GetBuffer(), 0,
 							  Config::kAcceptAddrSize, Config::kAcceptAddrSize,
-							  &bytesReceived, &sessionPtr->readOv_.overlapped_);
+							  &bytesReceived, &sessionPtr->recvOv_.overlapped_);
 
 	if (result == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();

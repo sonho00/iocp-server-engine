@@ -21,7 +21,7 @@ struct OverlappedEx {
 		ioType_ = IO_TYPE::kNone;
 		wsaBuf_ = {};
 		buffer_.Clear();
-		readPos_ = 0;
+		recvPos_ = 0;
 		writePos_ = 0;
 		sessionPtr_.Reset();
 	}
@@ -33,6 +33,6 @@ struct OverlappedEx {
 	MirroredRingBuffer buffer_;
 	SharedPoolPtr<Session> sessionPtr_ = nullptr;
 
-	size_t readPos_ = 0;
+	size_t recvPos_ = 0;
 	size_t writePos_ = 0;
 };
