@@ -29,11 +29,11 @@ class Session {
 
 	void Init();
 
-	bool RegisterRecv();
 	bool SendPacket(const PACKET_HEADER& header);
 
 	bool HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred);
 
+	bool RegisterAccept(SOCKET listenSocket);
 	bool Connect();
 	bool Disconnect();
 	bool Clear();
@@ -51,7 +51,9 @@ class Session {
 	OverlappedEx disconnectOv_;
 
    private:
-	bool RegisterSendInternal();
+	bool RegisterRecv();
+	bool RegisterSend();
+	bool RegisterDisconnect();
 
 	bool OnRecv(DWORD bytesTransferred);
 	bool OnSend(DWORD bytesTransferred);
