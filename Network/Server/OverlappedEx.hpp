@@ -22,7 +22,7 @@ struct OverlappedEx {
 		wsaBuf_ = {};
 		buffer_.Clear();
 		recvPos_ = 0;
-		writePos_ = 0;
+		sendPos_ = 0;
 		sessionPtr_.Reset();
 	}
 
@@ -34,5 +34,5 @@ struct OverlappedEx {
 	SharedPoolPtr<Session> sessionPtr_ = nullptr;
 
 	size_t recvPos_ = 0;
-	size_t writePos_ = 0;
+	size_t sendPos_ = 0;
 };

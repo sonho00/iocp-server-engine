@@ -47,14 +47,14 @@ class Session {
 	void SetListener(Listener* listener) { listener_ = listener; }
 
 	OverlappedEx recvOv_;
-	OverlappedEx writeOv_;
+	OverlappedEx sendOv_;
 	OverlappedEx disconnectOv_;
 
    private:
-	bool RegisterWriteInternal();
+	bool RegisterSendInternal();
 
 	bool OnRecv(DWORD bytesTransferred);
-	bool OnWrite(DWORD bytesTransferred);
+	bool OnSend(DWORD bytesTransferred);
 
 	SOCKET socket_ = INVALID_SOCKET;
 	uint64_t handle_ = SparseSet<Config::kMaxSession>::kInvalidHandle;
@@ -66,6 +66,6 @@ class Session {
 
 	bool isSending_ = false;
 
-	std::mutex writeMtx_;
+	std::mutex sendMtx_;
 	std::mutex connectMtx_;
 };

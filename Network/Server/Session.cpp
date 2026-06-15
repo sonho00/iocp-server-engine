@@ -29,7 +29,7 @@ Session::~Session() {
 
 void Session::Init() {
 	recvOv_.Reset();
-	writeOv_.Reset();
+	sendOv_.Reset();
 	disconnectOv_.Reset();
 	listener_ = nullptr;
 	isSending_ = false;
@@ -38,7 +38,7 @@ void Session::Init() {
 
 bool Session::RegisterRecv() {
 	recvOv_.wsaBuf_.len =
-		recvOv_.buffer_.GetSize() - recvOv_.writePos_ + recvOv_.recvPos_;
+		recvOv_.buffer_.GetSize() - recvOv_.sendPos_ + recvOv_.recvPos_;
 
 	if (recvOv_.wsaBuf_.len == 0) {
 		LOG_WARN("[Session:{}] recv buffer overflow detected", handle_);
@@ -46,7 +46,7 @@ bool Session::RegisterRecv() {
 	}
 
 	recvOv_.ioType_ = IO_TYPE::kRecv;
-	recvOv_.wsaBuf_.buf = recvOv_.buffer_.GetBuffer() + recvOv_.writePos_;
+	recvOv_.wsaBuf_.buf = recvOv_.buffer_.GetBuffer() + recvOv_.sendPos_;
 	ZeroMemory(&recvOv_.overlapped_, sizeof(OVERLAPPED));
 	recvOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
 
@@ -73,10 +73,10 @@ bool Session::RegisterRecv() {
 }
 
 bool Session::OnRecv(DWORD bytesTransferred) {
-	recvOv_.writePos_ += bytesTransferred;
+	recvOv_.sendPos_ += bytesTransferred;
 
 	while (true) {
-		size_t availableData = recvOv_.writePos_ - recvOv_.recvPos_;
+		size_t availableData = recvOv_.sendPos_ - recvOv_.recvPos_;
 		if (availableData < sizeof(PACKET_HEADER)) break;
 
 		auto* header = reinterpret_cast<PACKET_HEADER*>(
@@ -105,7 +105,7 @@ bool Session::OnRecv(DWORD bytesTransferred) {
 
 	if (recvOv_.recvPos_ >= recvOv_.buffer_.GetSize()) {
 		recvOv_.recvPos_ -= recvOv_.buffer_.GetSize();
-		recvOv_.writePos_ -= recvOv_.buffer_.GetSize();
+		recvOv_.sendPos_ -= recvOv_.buffer_.GetSize();
 	}
 
 	if (!RegisterRecv()) {
@@ -116,55 +116,55 @@ bool Session::OnRecv(DWORD bytesTransferred) {
 	return true;
 }
 
-bool Session::RegisterWriteInternal() {
+bool Session::RegisterSendInternal() {
 	assert(isSending_);
 
-	writeOv_.ioType_ = IO_TYPE::kSend;
-	writeOv_.wsaBuf_.buf = writeOv_.buffer_.GetBuffer() + writeOv_.recvPos_;
-	writeOv_.wsaBuf_.len = writeOv_.writePos_ - writeOv_.recvPos_;
-	ZeroMemory(&writeOv_.overlapped_, sizeof(OVERLAPPED));
-	writeOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
+	sendOv_.ioType_ = IO_TYPE::kSend;
+	sendOv_.wsaBuf_.buf = sendOv_.buffer_.GetBuffer() + sendOv_.recvPos_;
+	sendOv_.wsaBuf_.len = sendOv_.sendPos_ - sendOv_.recvPos_;
+	ZeroMemory(&sendOv_.overlapped_, sizeof(OVERLAPPED));
+	sendOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
 
 	DWORD flags = 0;
-	int result = WSASend(socket_, &writeOv_.wsaBuf_, 1, nullptr, flags,
-						 &writeOv_.overlapped_, nullptr);
+	int result = WSASend(socket_, &sendOv_.wsaBuf_, 1, nullptr, flags,
+						 &sendOv_.overlapped_, nullptr);
 
 	if (result == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if (errorCode == WSA_IO_PENDING) return true;
-		writeOv_.sessionPtr_.Reset();
+		sendOv_.sessionPtr_.Reset();
 		switch (errorCode) {
 			case WSAECONNRESET:
 				LOG_INFO("[Session:{}] Connection closed by client", handle_);
 				return false;
 
 			default:
-				LOG_ERROR("[Session:{}][Error:{}] Failed to post write",
-						  handle_, errorCode);
+				LOG_ERROR("[Session:{}][Error:{}] Failed to post send", handle_,
+						  errorCode);
 				return false;
 		}
 	}
 	return true;
 }
 
-bool Session::OnWrite(DWORD bytesTransferred) {
-	std::lock_guard<std::mutex> lock(writeMtx_);
+bool Session::OnSend(DWORD bytesTransferred) {
+	std::lock_guard<std::mutex> lock(sendMtx_);
 	assert(isSending_);
 
-	writeOv_.recvPos_ += bytesTransferred;
+	sendOv_.recvPos_ += bytesTransferred;
 
-	if (writeOv_.recvPos_ >= writeOv_.buffer_.GetSize()) {
-		writeOv_.recvPos_ -= writeOv_.buffer_.GetSize();
-		writeOv_.writePos_ -= writeOv_.buffer_.GetSize();
+	if (sendOv_.recvPos_ >= sendOv_.buffer_.GetSize()) {
+		sendOv_.recvPos_ -= sendOv_.buffer_.GetSize();
+		sendOv_.sendPos_ -= sendOv_.buffer_.GetSize();
 	}
 
-	if (writeOv_.recvPos_ == writeOv_.writePos_) {
+	if (sendOv_.recvPos_ == sendOv_.sendPos_) {
 		isSending_ = false;
 		return true;
 	}
 
-	if (!RegisterWriteInternal()) {
-		LOG_ERROR("[Session:{}] Failed to post another write", handle_);
+	if (!RegisterSendInternal()) {
+		LOG_ERROR("[Session:{}] Failed to post another send", handle_);
 		return false;
 	}
 
@@ -172,22 +172,22 @@ bool Session::OnWrite(DWORD bytesTransferred) {
 }
 
 bool Session::SendPacket(const PACKET_HEADER& header) {
-	std::lock_guard<std::mutex> lock(writeMtx_);
-	if (writeOv_.writePos_ - writeOv_.recvPos_ + header.size >
-		writeOv_.buffer_.GetSize()) {
-		LOG_WARN("[Session:{}] Write buffer overflow detected", handle_);
+	std::lock_guard<std::mutex> lock(sendMtx_);
+	if (sendOv_.sendPos_ - sendOv_.recvPos_ + header.size >
+		sendOv_.buffer_.GetSize()) {
+		LOG_WARN("[Session:{}] Send buffer overflow detected", handle_);
 		return false;
 	}
 
-	memcpy(writeOv_.buffer_.GetBuffer() + writeOv_.writePos_, &header,
+	memcpy(sendOv_.buffer_.GetBuffer() + sendOv_.sendPos_, &header,
 		   header.size);
-	writeOv_.writePos_ += header.size;
+	sendOv_.sendPos_ += header.size;
 
 	if (!isSending_) {
 		isSending_ = true;
 
-		if (!RegisterWriteInternal()) {
-			LOG_ERROR("[Session:{}] Failed to post another write", handle_);
+		if (!RegisterSendInternal()) {
+			LOG_ERROR("[Session:{}] Failed to post another send", handle_);
 			return false;
 		}
 	}
@@ -200,7 +200,7 @@ bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
 		case IO_TYPE::kRecv:
 			return OnRecv(bytesTransferred);
 		case IO_TYPE::kSend:
-			return OnWrite(bytesTransferred);
+			return OnSend(bytesTransferred);
 		default:
 			LOG_ERROR("[Session:{}] Unknown IO type", handle_);
 			return false;
