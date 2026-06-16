@@ -322,25 +322,11 @@ bool Session::Disconnect() {
 		}
 	}
 
-	disconnectOv_.ioType_ = IO_TYPE::kDisconnect;
-	ZeroMemory(&disconnectOv_.overlapped_, sizeof(OVERLAPPED));
-	disconnectOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
-
-	int result = ServerUtils::DisconnectEx(socket_, &disconnectOv_.overlapped_,
-										   TF_REUSE_SOCKET, 0);
-	if (result == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode == WSA_IO_PENDING) return true;
-		LOG_ERROR("[Session:{}][Error:{}] Failed to post disconnect", handle_,
-				  errorCode);
-		switch (errorCode) {
-			default:
-				LOG_ERROR("[Session:{}][Error:{}] Failed to post disconnect",
-						  handle_, errorCode);
-				break;
-		}
+	if (!RegisterDisconnect()) {
+		LOG_ERROR("[Session:{}] Failed to post disconnect", handle_);
 		return false;
 	}
+
 	return true;
 }
 

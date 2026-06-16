@@ -105,7 +105,7 @@ bool Listener::PostAccept() {
 			return false;
 		}
 
-		if (!RegisterAccept(sessionPtr)) {
+		if (!sessionPtr->RegisterAccept(socket_)) {
 			pendingAccepts_.fetch_sub(1, std::memory_order_relaxed);
 			LOG_ERROR("[Session:{}] Failed to post AcceptEx",
 					  sessionPtr->GetHandle());
@@ -114,36 +114,6 @@ bool Listener::PostAccept() {
 		}
 
 		sessionPtr->SetListener(this);
-	}
-	return true;
-}
-
-// NOLINTNEXTLINE readability-make-member-function-const
-bool Listener::RegisterAccept(SharedPoolPtr<Session>& sessionPtr) {
-	sessionPtr->recvOv_.ioType_ = IO_TYPE::kAccept;
-	sessionPtr->recvOv_.wsaBuf_.buf = sessionPtr->recvOv_.buffer_.GetBuffer();
-	sessionPtr->recvOv_.wsaBuf_.len =
-		static_cast<ULONG>(sessionPtr->recvOv_.buffer_.GetSize());
-	ZeroMemory(&sessionPtr->recvOv_.overlapped_, sizeof(OVERLAPPED));
-	sessionPtr->recvOv_.sessionPtr_ = sessionPtr;
-
-	DWORD bytesReceived = 0;
-	BOOL result =
-		ServerUtils::AcceptEx(socket_, sessionPtr->GetSocket(),
-							  sessionPtr->recvOv_.buffer_.GetBuffer(), 0,
-							  Config::kAcceptAddrSize, Config::kAcceptAddrSize,
-							  &bytesReceived, &sessionPtr->recvOv_.overlapped_);
-
-	if (result == SOCKET_ERROR) {
-		int errorCode = WSAGetLastError();
-		if (errorCode == WSA_IO_PENDING) return true;
-		switch (errorCode) {
-			default:
-				LOG_ERROR("[Session:{}][Error:{}] AcceptEx failed",
-						  sessionPtr->GetHandle(), errorCode);
-				break;
-		}
-		return false;
 	}
 	return true;
 }
