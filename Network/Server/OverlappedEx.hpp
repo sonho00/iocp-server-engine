@@ -20,7 +20,7 @@ struct OverlappedEx {
 		overlapped_ = {};
 		ioType_ = IO_TYPE::kNone;
 		wsaBuf_ = {};
-		buffer_.Clear();
+		buffer_.Reset();
 		recvPos_ = 0;
 		sendPos_ = 0;
 		sessionPtr_.Reset();

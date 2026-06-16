@@ -36,7 +36,7 @@ class Session {
 	bool RegisterAccept(SOCKET listenSocket);
 	bool Connect();
 	bool Disconnect();
-	bool Clear();
+	bool Reset();
 
 	[[nodiscard]] SOCKET GetSocket() const { return socket_; }
 	[[nodiscard]] uint64_t GetHandle() const { return handle_; }

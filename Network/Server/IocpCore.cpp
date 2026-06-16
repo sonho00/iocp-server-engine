@@ -105,7 +105,7 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 	if (overlappedEx.ioType_ == IO_TYPE::kDisconnect) {
 		LOG_ERROR("[Session:{}][Error:{}] Disconnect operation failed",
 				  sessionPtr->GetHandle(), errorCode);
-		sessionPtr->Clear();
+		sessionPtr->Reset();
 	} else {
 		overlappedEx.sessionPtr_.Reset();
 		sessionPtr->Disconnect();
@@ -151,7 +151,7 @@ void IocpCore::Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred) {
 		case IO_TYPE::kDisconnect: {
 			LOG_INFO("[Session:{}] Disconnect completed",
 					 sessionPtr->GetHandle());
-			sessionPtr->Clear();
+			sessionPtr->Reset();
 			break;
 		}
 		case IO_TYPE::kRecv:

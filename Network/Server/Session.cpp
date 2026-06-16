@@ -330,7 +330,7 @@ bool Session::Disconnect() {
 	return true;
 }
 
-bool Session::Clear() {
+bool Session::Reset() {
 	sessionManager_->DisconnectSession(handle_);
 	return true;
 }

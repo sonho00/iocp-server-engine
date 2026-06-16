@@ -49,8 +49,8 @@ class ObjectPool {
 		} else {
 			if constexpr (isLazy) {
 				obj->~T();
-			} else if constexpr (hasClear<T>) {
-				obj->Clear();
+			} else if constexpr (hasReset<T>) {
+				obj->Reset();
 			}
 		}
 
