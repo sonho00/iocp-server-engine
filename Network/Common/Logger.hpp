@@ -13,24 +13,24 @@
 
 #define LOG_DEBUG(fmt, ...)                                          \
 	if constexpr (NetUtils::LogLevel::kDebug >= NetUtils::kLogLevel) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kDebug, fmt,               \
-					  std::source_location::current(), ##__VA_ARGS__)
+	NetUtils::Log(NetUtils::LogLevel::kDebug, fmt,                   \
+				  std::source_location::current(), ##__VA_ARGS__)
 #define LOG_INFO(fmt, ...)                                          \
 	if constexpr (NetUtils::LogLevel::kInfo >= NetUtils::kLogLevel) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kInfo, fmt,               \
-					  std::source_location::current(), ##__VA_ARGS__)
+	NetUtils::Log(NetUtils::LogLevel::kInfo, fmt,                   \
+				  std::source_location::current(), ##__VA_ARGS__)
 #define LOG_WARN(fmt, ...)                                          \
 	if constexpr (NetUtils::LogLevel::kWarn >= NetUtils::kLogLevel) \
-	NetUtils::LogInfo(NetUtils::LogLevel::kWarn, fmt,               \
-					  std::source_location::current(), ##__VA_ARGS__)
+	NetUtils::Log(NetUtils::LogLevel::kWarn, fmt,                   \
+				  std::source_location::current(), ##__VA_ARGS__)
 #define LOG_ERROR(fmt, ...)                                          \
 	if constexpr (NetUtils::LogLevel::kError >= NetUtils::kLogLevel) \
-	NetUtils::LogError(NetUtils::LogLevel::kError, fmt,              \
-					   std::source_location::current(), ##__VA_ARGS__)
+	NetUtils::Log(NetUtils::LogLevel::kError, fmt,                   \
+				  std::source_location::current(), ##__VA_ARGS__)
 #define LOG_FATAL(fmt, ...)                                          \
 	if constexpr (NetUtils::LogLevel::kFatal >= NetUtils::kLogLevel) \
-	NetUtils::LogError(NetUtils::LogLevel::kFatal, fmt,              \
-					   std::source_location::current(), ##__VA_ARGS__)
+	NetUtils::Log(NetUtils::LogLevel::kFatal, fmt,                   \
+				  std::source_location::current(), ##__VA_ARGS__)
 
 namespace NetUtils {
 enum class LogLevel : std::uint8_t { kDebug, kInfo, kWarn, kError, kFatal };
@@ -53,25 +53,16 @@ constexpr std::string_view GetLevelStr(LogLevel level) {
 }
 
 template <typename... Args>
-void LogInfo(LogLevel level, std::string_view fmt_str,
-			 std::source_location location, Args&&... args) {
+void Log(LogLevel level, std::string_view fmt_str,
+		 std::source_location location, Args&&... args) {
 	auto now = std::chrono::system_clock::now();
 	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
+	std::ostream& stream = (level >= LogLevel::kError) ? std::cerr : std::cout;
 
-	std::cout << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
-							 GetLevelStr(level), GetCurrentThreadId(), msg,
-							 location.file_name(), location.line());
-}
+	stream << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
+						  GetLevelStr(level), GetCurrentThreadId(), msg,
+						  location.file_name(), location.line());
 
-template <typename... Args>
-void LogError(LogLevel level, std::string_view fmt_str,
-			  std::source_location location, Args&&... args) {
-	auto now = std::chrono::system_clock::now();
-	std::string msg = std::vformat(fmt_str, std::make_format_args(args...));
-
-	std::cerr << std::format("[{:%F %T}][{}][Thread:{}]{}\n{}:{}\n", now,
-							 GetLevelStr(level), GetCurrentThreadId(), msg,
-							 location.file_name(), location.line());
 	if (level == LogLevel::kFatal) {
 		std::cout.flush();
 		std::cerr.flush();
