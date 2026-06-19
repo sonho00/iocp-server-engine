@@ -17,8 +17,6 @@ class IocpCore {
 	bool Start(size_t threadCount);
 	[[nodiscard]] bool Register(SOCKET socket, ULONG_PTR completionKey) const;
 
-	void SetListener(Listener* listener) { listener_ = listener; }
-
    private:
 	void WorkerThread();
 
@@ -27,6 +25,5 @@ class IocpCore {
 
 	std::vector<std::thread> threads_;
 	HANDLE hIocp_;
-	Listener* listener_ = nullptr;
 	std::atomic<bool> isShuttingDown_ = false;
 };
