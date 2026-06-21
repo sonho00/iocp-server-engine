@@ -28,8 +28,8 @@ class ISparsePool {
 
 	static constexpr uint64_t kInvalidHandle = static_cast<uint64_t>(-1);
 
-	virtual bool AddRef(uint64_t handle) = 0;
-	virtual bool ReleaseRef(uint64_t handle) = 0;
+	virtual void AddRef(uint64_t handle) = 0;
+	virtual void ReleaseRef(uint64_t handle) = 0;
 
 	[[nodiscard]] virtual bool IsValid(uint64_t handle) const = 0;
 

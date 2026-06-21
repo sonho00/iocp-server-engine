@@ -27,7 +27,7 @@ class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 
 	template <typename... Args>
 	SharedPoolPtr<T> Acquire(size_t state = 1, Args&&... args);
-	bool MoveToState(uint64_t handle, size_t newState);
+	void MoveToState(uint64_t handle, size_t newState);
 
 	[[nodiscard]] bool IsValid(uint64_t handle) const override;
 
@@ -38,8 +38,8 @@ class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 	}
 
    private:
-	bool AddRef(uint64_t handle) override;
-	bool ReleaseRef(uint64_t handle) override;
+	void AddRef(uint64_t handle) override;
+	void ReleaseRef(uint64_t handle) override;
 
 	ObjectPool<Slot, N, isLazy> pool_;
 	PostReleaseFunc postReleaseFunc_;
@@ -65,10 +65,10 @@ SharedPoolPtr<T> SparsePool<T, N, StateCount, isLazy>::Acquire(size_t state,
 }
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
-bool SparsePool<T, N, StateCount, isLazy>::MoveToState(uint64_t handle,
+void SparsePool<T, N, StateCount, isLazy>::MoveToState(uint64_t handle,
 													   size_t newState) {
 	std::lock_guard lock(mutex_);
-	return SparseSet<N, StateCount>::MoveToState(handle, newState);
+	SparseSet<N, StateCount>::MoveToState(handle, newState);
 }
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
@@ -85,16 +85,14 @@ T* SparsePool<T, N, StateCount, isLazy>::GetObj(uint64_t handle) {
 }
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
-bool SparsePool<T, N, StateCount, isLazy>::AddRef(uint64_t handle) {
+void SparsePool<T, N, StateCount, isLazy>::AddRef(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
 	slot->refCount_.fetch_add(1, std::memory_order_relaxed);
-
-	return true;
 }
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
-bool SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
+void SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	Slot* slot = pool_.Get(idx);
 	if (slot->refCount_.fetch_sub(1, std::memory_order_release) == 1) {
@@ -107,8 +105,5 @@ bool SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
 		if (postReleaseFunc_) {
 			postReleaseFunc_();
 		}
-		return true;
 	}
-
-	return false;
 }

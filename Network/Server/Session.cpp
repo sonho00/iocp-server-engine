@@ -266,11 +266,7 @@ bool Session::Connect() {
 			return false;
 		}
 
-		if (!sessionManager_->ConnectSession(handle_)) {
-			LOG_ERROR("[Session:{}] Failed to transition to Connected state",
-					  handle_);
-			return false;
-		}
+		sessionManager_->ConnectSession(handle_);
 	}
 
 	SharedPoolPtr<PacketBlock> packet = packetHandler_->AcquirePacket();
@@ -299,14 +295,8 @@ bool Session::Disconnect() {
 		switch (sessionManager_->GetState(handle_)) {
 			case SessionState::kPending:
 			case SessionState::kConnected:
-				if (!sessionManager_->SetState(handle_,
-											   SessionState::kDisconnecting)) {
-					LOG_ERROR(
-						"[Session:{}] Failed to transition to Disconnecting "
-						"state",
-						handle_);
-					return false;
-				}
+				sessionManager_->SetState(handle_,
+										  SessionState::kDisconnecting);
 				break;
 
 			case SessionState::kDisconnecting:

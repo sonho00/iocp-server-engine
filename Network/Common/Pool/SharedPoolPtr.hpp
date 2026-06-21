@@ -24,7 +24,7 @@ class SharedPoolPtr {
 	[[nodiscard]] T& operator*() const;
 	T* operator->();
 
-	bool Reset();
+	void Reset();
 
 	[[nodiscard]] uint64_t GetHandle() const { return handle_; }
 
@@ -118,9 +118,10 @@ T* SharedPoolPtr<T>::operator->() {
 }
 
 template <typename T>
-bool SharedPoolPtr<T>::Reset() {
-	bool result = pool_ && pool_->ReleaseRef(handle_);
+void SharedPoolPtr<T>::Reset() {
+	if (pool_) {
+		pool_->ReleaseRef(handle_);
+	}
 	pool_ = nullptr;
 	handle_ = ISparsePool<T>::kInvalidHandle;
-	return result;
 }

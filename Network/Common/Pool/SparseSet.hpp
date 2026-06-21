@@ -23,12 +23,11 @@ class SparseSet {
 
 	// state에 있는 핸들을 하나 반환. state에 핸들이 없으면 kInvalidHandle 반환
 	[[nodiscard]] uint64_t Pop(size_t state = 0);
-	// 핸들을 idle(state 0)로 이동. 핸들이 유효하지 않으면 false 반환
-	bool Push(uint64_t handle);
+	void Push(uint64_t handle);
 
-	bool MoveToState(uint64_t handle, size_t newState);
-	bool IncrementState(uint64_t handle);
-	bool DecrementState(uint64_t handle);
+	void MoveToState(uint64_t handle, size_t newState);
+	void IncrementState(uint64_t handle);
+	void DecrementState(uint64_t handle);
 	[[nodiscard]] std::vector<uint64_t> GetIndicesInState(
 		size_t state = stateCount - 1);
 
@@ -73,39 +72,36 @@ uint64_t SparseSet<N, stateCount>::Pop(size_t state) {
 }
 
 template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::Push(uint64_t handle) {
+void SparseSet<N, stateCount>::Push(uint64_t handle) {
 	auto who = static_cast<uint32_t>(handle);
 	MoveToState(handle, 0);
 	sparse_[who].generation_++;
-
-	return true;
 }
 
 template <size_t N, size_t stateCount>
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-bool SparseSet<N, stateCount>::MoveToState(uint64_t handle, size_t newState) {
+void SparseSet<N, stateCount>::MoveToState(uint64_t handle, size_t newState) {
 	if (newState >= stateCount) {
 		LOG_ERROR("Invalid newState: {}, stateCount: {}", newState, stateCount);
-		return false;
+		return;
 	}
 
 	auto who = static_cast<uint32_t>(handle);
 	while (sparse_[who].state_ < newState) {
-		if (!IncrementState(handle)) return false;
+		IncrementState(handle);
 	}
 	while (sparse_[who].state_ > newState) {
-		if (!DecrementState(handle)) return false;
+		DecrementState(handle);
 	}
-
-	return true;
 }
+
 template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::IncrementState(uint64_t handle) {
+void SparseSet<N, stateCount>::IncrementState(uint64_t handle) {
 	auto who = static_cast<uint32_t>(handle);
 	size_t currentState = sparse_[who].state_;
 	if (currentState >= stateCount - 1) {
 		LOG_ERROR("[Session:{}] Cannot increment state", handle);
-		return false;
+		return;
 	}
 
 	size_t nextState = currentState + 1;
@@ -118,17 +114,15 @@ bool SparseSet<N, stateCount>::IncrementState(uint64_t handle) {
 
 	cursor_[nextState]--;
 	sparse_[who].state_ = nextState;
-
-	return true;
 }
 
 template <size_t N, size_t stateCount>
-bool SparseSet<N, stateCount>::DecrementState(uint64_t handle) {
+void SparseSet<N, stateCount>::DecrementState(uint64_t handle) {
 	auto who = static_cast<uint32_t>(handle);
 	size_t currentState = sparse_[who].state_;
 	if (currentState == 0) {
 		LOG_ERROR("[Session:{}] Cannot decrement state", handle);
-		return false;
+		return;
 	}
 
 	size_t prevState = currentState - 1;
@@ -141,8 +135,6 @@ bool SparseSet<N, stateCount>::DecrementState(uint64_t handle) {
 
 	cursor_[currentState]++;
 	sparse_[who].state_ = prevState;
-
-	return true;
 }
 
 template <size_t N, size_t stateCount>
