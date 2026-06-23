@@ -8,6 +8,6 @@ concept hasInit = requires(T obj, Args&&... args) {
 };
 
 template <typename T>
-concept hasClear = requires(T obj) {
-    obj.Clear();
+concept hasReset = requires(T obj) {
+    obj.Reset();
 };

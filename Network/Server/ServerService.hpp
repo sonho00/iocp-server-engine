@@ -20,7 +20,6 @@ class ServerService {
 		  accountManager_(&dbManager_) {}
 
 	bool Start() {
-		iocpCore_.SetListener(&listener_);
 		sessionManager_.Init(iocpCore_, listener_, accountManager_,
 							 packetHandler_);
 

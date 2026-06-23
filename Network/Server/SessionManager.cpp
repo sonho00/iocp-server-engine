@@ -60,9 +60,9 @@ SharedPoolPtr<Session> SessionManager::CreateSession() {
 	return sessionPtrs_[idx];
 }
 
-bool SessionManager::ConnectSession(uint64_t handle) {
-	return sessionPool_.MoveToState(
-		handle, static_cast<size_t>(SessionState::kConnected));
+void SessionManager::ConnectSession(uint64_t handle) {
+	sessionPool_.MoveToState(handle,
+							 static_cast<size_t>(SessionState::kConnected));
 }
 
 void SessionManager::DisconnectSession(uint64_t handle) {
@@ -78,10 +78,9 @@ bool SessionManager::LogInSession(uint64_t handle, const Account& account) {
 	return result != 0;
 }
 
-bool SessionManager::LogOutSession(uint64_t handle) {
+void SessionManager::LogOutSession(uint64_t handle) {
 	auto idx = static_cast<uint32_t>(handle);
 	sessionPtrs_[idx]->accountId_ = 0;
-	return true;
 }
 
 SharedPoolPtr<Session> SessionManager::GetSession(uint64_t handle) {
@@ -97,6 +96,6 @@ SessionState SessionManager::GetState(uint64_t handle) {
 	return static_cast<SessionState>(sessionPool_.GetState(handle));
 }
 
-bool SessionManager::SetState(uint64_t handle, SessionState newState) {
-	return sessionPool_.MoveToState(handle, static_cast<size_t>(newState));
+void SessionManager::SetState(uint64_t handle, SessionState newState) {
+	sessionPool_.MoveToState(handle, static_cast<size_t>(newState));
 }

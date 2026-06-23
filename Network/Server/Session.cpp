@@ -14,8 +14,8 @@
 #include "SessionManager.hpp"
 
 Session::Session() {
-	socket_ = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
-						WSA_FLAG_OVERLAPPED);
+	socket_ = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0,
+						 WSA_FLAG_OVERLAPPED);
 	if (socket_ == INVALID_SOCKET) {
 		LOG_ERROR("Failed to create accept socket");
 	}
@@ -28,43 +28,43 @@ Session::~Session() {
 }
 
 void Session::Init() {
-	readOv_.Reset();
-	writeOv_.Reset();
+	recvOv_.Reset();
+	sendOv_.Reset();
 	disconnectOv_.Reset();
 	listener_ = nullptr;
 	isSending_ = false;
 	handle_ = ISparsePool<Session>::kInvalidHandle;
 }
 
-bool Session::RegisterRead() {
-	readOv_.wsaBuf_.len =
-		readOv_.buffer_.GetSize() - readOv_.writePos_ + readOv_.readPos_;
+bool Session::RegisterRecv() {
+	recvOv_.wsaBuf_.len =
+		recvOv_.buffer_.GetSize() - recvOv_.sendPos_ + recvOv_.recvPos_;
 
-	if (readOv_.wsaBuf_.len == 0) {
-		LOG_WARN("[Session:{}] Read buffer overflow detected", handle_);
+	if (recvOv_.wsaBuf_.len == 0) {
+		LOG_WARN("[Session:{}] recv buffer overflow detected", handle_);
 		return false;
 	}
 
-	readOv_.ioType_ = IO_TYPE::kRecv;
-	readOv_.wsaBuf_.buf = readOv_.buffer_.GetBuffer() + readOv_.writePos_;
-	ZeroMemory(&readOv_.overlapped_, sizeof(OVERLAPPED));
-	readOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
+	recvOv_.ioType_ = IO_TYPE::kRecv;
+	recvOv_.wsaBuf_.buf = recvOv_.buffer_.GetBuffer() + recvOv_.sendPos_;
+	ZeroMemory(&recvOv_.overlapped_, sizeof(OVERLAPPED));
+	recvOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
 
 	DWORD flags = 0;
-	int result = WSARecv(socket_, &readOv_.wsaBuf_, 1, nullptr, &flags,
-						 &readOv_.overlapped_, nullptr);
+	int result = WSARecv(socket_, &recvOv_.wsaBuf_, 1, nullptr, &flags,
+						 &recvOv_.overlapped_, nullptr);
 
 	if (result == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if (errorCode == WSA_IO_PENDING) return true;
-		readOv_.sessionPtr_.Reset();
+		recvOv_.sessionPtr_.Reset();
 		switch (errorCode) {
 			case WSAECONNRESET:
 				LOG_INFO("[Session:{}] Connection closed by client", handle_);
 				return false;
 
 			default:
-				LOG_ERROR("[Session:{}][Error:{}] Failed to post read", handle_,
+				LOG_ERROR("[Session:{}][Error:{}] Failed to post recv", handle_,
 						  errorCode);
 				return false;
 		}
@@ -72,18 +72,18 @@ bool Session::RegisterRead() {
 	return true;
 }
 
-bool Session::OnRead(DWORD bytesTransferred) {
-	readOv_.writePos_ += bytesTransferred;
+bool Session::OnRecv(DWORD bytesTransferred) {
+	recvOv_.sendPos_ += bytesTransferred;
 
 	while (true) {
-		size_t availableData = readOv_.writePos_ - readOv_.readPos_;
+		size_t availableData = recvOv_.sendPos_ - recvOv_.recvPos_;
 		if (availableData < sizeof(PACKET_HEADER)) break;
 
 		auto* header = reinterpret_cast<PACKET_HEADER*>(
-			readOv_.buffer_.GetBuffer() + readOv_.readPos_);
+			recvOv_.buffer_.GetBuffer() + recvOv_.recvPos_);
 
 		if (header->size < sizeof(PACKET_HEADER) ||
-			header->size >= readOv_.buffer_.GetSize()) {
+			header->size >= recvOv_.buffer_.GetSize()) {
 			LOG_ERROR("[Session:{}] Invalid packet size: {}", handle_,
 					  header->size);
 			return false;
@@ -100,178 +100,81 @@ bool Session::OnRead(DWORD bytesTransferred) {
 		LOG_DEBUG("[Session:{}] Processed packet ID: {}, Size: {}", handle_,
 				  static_cast<uint16_t>(header->id), header->size);
 
-		readOv_.readPos_ += header->size;
+		recvOv_.recvPos_ += header->size;
 	}
 
-	if (readOv_.readPos_ >= readOv_.buffer_.GetSize()) {
-		readOv_.readPos_ -= readOv_.buffer_.GetSize();
-		readOv_.writePos_ -= readOv_.buffer_.GetSize();
+	if (recvOv_.recvPos_ >= recvOv_.buffer_.GetSize()) {
+		recvOv_.recvPos_ -= recvOv_.buffer_.GetSize();
+		recvOv_.sendPos_ -= recvOv_.buffer_.GetSize();
 	}
 
-	if (!RegisterRead()) {
-		LOG_ERROR("[Session:{}] Failed to post another read", handle_);
+	if (!RegisterRecv()) {
+		LOG_ERROR("[Session:{}] Failed to post another recv", handle_);
 		return false;
 	}
 
 	return true;
 }
 
-bool Session::RegisterWriteInternal() {
+bool Session::RegisterSend() {
 	assert(isSending_);
 
-	writeOv_.ioType_ = IO_TYPE::kSend;
-	writeOv_.wsaBuf_.buf = writeOv_.buffer_.GetBuffer() + writeOv_.readPos_;
-	writeOv_.wsaBuf_.len = writeOv_.writePos_ - writeOv_.readPos_;
-	ZeroMemory(&writeOv_.overlapped_, sizeof(OVERLAPPED));
-	writeOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
+	sendOv_.ioType_ = IO_TYPE::kSend;
+	sendOv_.wsaBuf_.buf = sendOv_.buffer_.GetBuffer() + sendOv_.recvPos_;
+	sendOv_.wsaBuf_.len = sendOv_.sendPos_ - sendOv_.recvPos_;
+	ZeroMemory(&sendOv_.overlapped_, sizeof(OVERLAPPED));
+	sendOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
 
 	DWORD flags = 0;
-	int result = WSASend(socket_, &writeOv_.wsaBuf_, 1, nullptr, flags,
-						 &writeOv_.overlapped_, nullptr);
+	int result = WSASend(socket_, &sendOv_.wsaBuf_, 1, nullptr, flags,
+						 &sendOv_.overlapped_, nullptr);
 
 	if (result == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if (errorCode == WSA_IO_PENDING) return true;
-		writeOv_.sessionPtr_.Reset();
+		sendOv_.sessionPtr_.Reset();
 		switch (errorCode) {
 			case WSAECONNRESET:
 				LOG_INFO("[Session:{}] Connection closed by client", handle_);
 				return false;
 
 			default:
-				LOG_ERROR("[Session:{}][Error:{}] Failed to post write",
-						  handle_, errorCode);
+				LOG_ERROR("[Session:{}][Error:{}] Failed to post send", handle_,
+						  errorCode);
 				return false;
 		}
 	}
 	return true;
 }
 
-bool Session::OnWrite(DWORD bytesTransferred) {
-	std::lock_guard<std::mutex> lock(writeMtx_);
-	assert(isSending_);
+bool Session::RegisterAccept(SOCKET listenSocket) {
+	recvOv_.ioType_ = IO_TYPE::kAccept;
+	recvOv_.wsaBuf_.buf = recvOv_.buffer_.GetBuffer();
+	recvOv_.wsaBuf_.len = static_cast<ULONG>(recvOv_.buffer_.GetSize());
+	ZeroMemory(&recvOv_.overlapped_, sizeof(OVERLAPPED));
+	recvOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
 
-	writeOv_.readPos_ += bytesTransferred;
+	DWORD bytesReceived = 0;
+	BOOL result = ServerUtils::AcceptEx(
+		listenSocket, socket_, recvOv_.buffer_.GetBuffer(), 0,
+		Config::kAcceptAddrSize, Config::kAcceptAddrSize, &bytesReceived,
+		&recvOv_.overlapped_);
 
-	if (writeOv_.readPos_ >= writeOv_.buffer_.GetSize()) {
-		writeOv_.readPos_ -= writeOv_.buffer_.GetSize();
-		writeOv_.writePos_ -= writeOv_.buffer_.GetSize();
-	}
-
-	if (writeOv_.readPos_ == writeOv_.writePos_) {
-		isSending_ = false;
-		return true;
-	}
-
-	if (!RegisterWriteInternal()) {
-		LOG_ERROR("[Session:{}] Failed to post another write", handle_);
-		return false;
-	}
-
-	return true;
-}
-
-bool Session::SendPacket(const PACKET_HEADER& header) {
-	std::lock_guard<std::mutex> lock(writeMtx_);
-	if (writeOv_.writePos_ - writeOv_.readPos_ + header.size >
-		writeOv_.buffer_.GetSize()) {
-		LOG_WARN("[Session:{}] Write buffer overflow detected", handle_);
-		return false;
-	}
-
-	memcpy(writeOv_.buffer_.GetBuffer() + writeOv_.writePos_, &header,
-		   header.size);
-	writeOv_.writePos_ += header.size;
-
-	if (!isSending_) {
-		isSending_ = true;
-
-		if (!RegisterWriteInternal()) {
-			LOG_ERROR("[Session:{}] Failed to post another write", handle_);
-			return false;
-		}
-	}
-
-	return true;
-}
-
-bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
-	switch (ovEx.ioType_) {
-		case IO_TYPE::kRecv:
-			return OnRead(bytesTransferred);
-		case IO_TYPE::kSend:
-			return OnWrite(bytesTransferred);
-		default:
-			LOG_ERROR("[Session:{}] Unknown IO type", handle_);
-			return false;
-	}
-}
-
-bool Session::Connect() {
-	{
-		std::lock_guard<std::mutex> lock(connectMtx_);
-		if (sessionManager_->GetState(handle_) != SessionState::kPending) {
-			LOG_ERROR("[Session:{}] Invalid state for Connect: {}", handle_,
-					  static_cast<uint8_t>(sessionManager_->GetState(handle_)));
-			return false;
-		}
-
-		if (!sessionManager_->ConnectSession(handle_)) {
-			LOG_ERROR("[Session:{}] Failed to transition to Connected state",
-					  handle_);
-			return false;
-		}
-	}
-
-	SharedPoolPtr<PacketBlock> packet = packetHandler_->AcquirePacket();
-	auto& welcomePacket = reinterpret_cast<S2C_CHAT&>(*packet->data());
-	welcomePacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
-	sprintf(welcomePacket.message, "%lld", handle_);
-	welcomePacket.header.size =
-		sizeof(welcomePacket.header) + strlen(welcomePacket.message) + 1;
-
-	if (!SendPacket(welcomePacket.header)) {
-		LOG_ERROR("[Session:{}] Failed to send welcome packet", handle_);
-		return false;
-	}
-
-	if (!RegisterRead()) {
-		LOG_WARN("[Session:{}] Failed to post initial read", handle_);
-		return false;
-	}
-
-	return true;
-}
-
-bool Session::Disconnect() {
-	{
-		std::lock_guard<std::mutex> lock(connectMtx_);
-		switch (sessionManager_->GetState(handle_)) {
-			case SessionState::kPending:
-			case SessionState::kConnected:
-				if (!sessionManager_->SetState(handle_,
-											   SessionState::kDisconnecting)) {
-					LOG_ERROR(
-						"[Session:{}] Failed to transition to Disconnecting "
-						"state",
-						handle_);
-					return false;
-				}
-				break;
-
-			case SessionState::kDisconnecting:
-				LOG_WARN("[Session:{}] Already in Disconnecting state",
-						 handle_);
-				return true;
-
+	if (result == SOCKET_ERROR) {
+		int errorCode = WSAGetLastError();
+		if (errorCode == WSA_IO_PENDING) return true;
+		switch (errorCode) {
 			default:
-				LOG_ERROR(
-					"[Session:{}] Invalid state for Disconnect: {}", handle_,
-					static_cast<uint8_t>(sessionManager_->GetState(handle_)));
-				return false;
+				LOG_ERROR("[Session:{}][Error:{}] AcceptEx failed", GetHandle(),
+						  errorCode);
+				break;
 		}
+		return false;
 	}
+	return true;
+}
 
+bool Session::RegisterDisconnect() {
 	disconnectOv_.ioType_ = IO_TYPE::kDisconnect;
 	ZeroMemory(&disconnectOv_.overlapped_, sizeof(OVERLAPPED));
 	disconnectOv_.sessionPtr_ = sessionManager_->GetSession(handle_);
@@ -294,7 +197,130 @@ bool Session::Disconnect() {
 	return true;
 }
 
-bool Session::Clear() {
+bool Session::OnSend(DWORD bytesTransferred) {
+	std::lock_guard<std::mutex> lock(sendMtx_);
+	assert(isSending_);
+
+	sendOv_.recvPos_ += bytesTransferred;
+
+	if (sendOv_.recvPos_ >= sendOv_.buffer_.GetSize()) {
+		sendOv_.recvPos_ -= sendOv_.buffer_.GetSize();
+		sendOv_.sendPos_ -= sendOv_.buffer_.GetSize();
+	}
+
+	if (sendOv_.recvPos_ == sendOv_.sendPos_) {
+		isSending_ = false;
+		return true;
+	}
+
+	if (!RegisterSend()) {
+		LOG_ERROR("[Session:{}] Failed to post another send", handle_);
+		return false;
+	}
+
+	return true;
+}
+
+bool Session::SendPacket(const PACKET_HEADER& header) {
+	std::lock_guard<std::mutex> lock(sendMtx_);
+	if (sendOv_.sendPos_ - sendOv_.recvPos_ + header.size >
+		sendOv_.buffer_.GetSize()) {
+		LOG_WARN("[Session:{}] Send buffer overflow detected", handle_);
+		return false;
+	}
+
+	memcpy(sendOv_.buffer_.GetBuffer() + sendOv_.sendPos_, &header,
+		   header.size);
+	sendOv_.sendPos_ += header.size;
+
+	if (!isSending_) {
+		isSending_ = true;
+
+		if (!RegisterSend()) {
+			LOG_ERROR("[Session:{}] Failed to post another send", handle_);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
+	switch (ovEx.ioType_) {
+		case IO_TYPE::kRecv:
+			return OnRecv(bytesTransferred);
+		case IO_TYPE::kSend:
+			return OnSend(bytesTransferred);
+		default:
+			LOG_ERROR("[Session:{}] Unknown IO type", handle_);
+			return false;
+	}
+}
+
+bool Session::Connect() {
+	{
+		std::lock_guard<std::mutex> lock(connectMtx_);
+		if (sessionManager_->GetState(handle_) != SessionState::kPending) {
+			LOG_ERROR("[Session:{}] Invalid state for Connect: {}", handle_,
+					  static_cast<uint8_t>(sessionManager_->GetState(handle_)));
+			return false;
+		}
+
+		sessionManager_->ConnectSession(handle_);
+	}
+
+	SharedPoolPtr<PacketBlock> packet = packetHandler_->AcquirePacket();
+	auto& welcomePacket = reinterpret_cast<S2C_CHAT&>(*packet->data());
+	welcomePacket.header.id = static_cast<uint16_t>(PACKET_ID::kChat);
+	sprintf(welcomePacket.message, "%lld", handle_);
+	welcomePacket.header.size =
+		sizeof(welcomePacket.header) + strlen(welcomePacket.message) + 1;
+
+	if (!SendPacket(welcomePacket.header)) {
+		LOG_ERROR("[Session:{}] Failed to send welcome packet", handle_);
+		return false;
+	}
+
+	if (!RegisterRecv()) {
+		LOG_WARN("[Session:{}] Failed to post initial recv", handle_);
+		return false;
+	}
+
+	return true;
+}
+
+bool Session::Disconnect() {
+	{
+		std::lock_guard<std::mutex> lock(connectMtx_);
+		switch (sessionManager_->GetState(handle_)) {
+			case SessionState::kPending:
+			case SessionState::kConnected:
+				sessionManager_->SetState(handle_,
+										  SessionState::kDisconnecting);
+				break;
+
+			case SessionState::kDisconnecting:
+				LOG_WARN("[Session:{}] Already in Disconnecting state",
+						 handle_);
+				return true;
+
+			default:
+				LOG_ERROR(
+					"[Session:{}] Invalid state for Disconnect: {}", handle_,
+					static_cast<uint8_t>(sessionManager_->GetState(handle_)));
+				return false;
+		}
+	}
+
+	if (!RegisterDisconnect()) {
+		LOG_ERROR("[Session:{}] Failed to post disconnect", handle_);
+		return false;
+	}
+
+	return true;
+}
+
+bool Session::Reset() {
 	sessionManager_->DisconnectSession(handle_);
 	return true;
 }

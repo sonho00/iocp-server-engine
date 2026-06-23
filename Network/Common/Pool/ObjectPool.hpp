@@ -41,7 +41,7 @@ class ObjectPool {
 		return obj;
 	};
 
-	bool Release(size_t idx) {
+	void Release(size_t idx) {
 		T* obj = reinterpret_cast<T*>(&pool_[idx * sizeof(T)]);
 
 		if (deleter_) {
@@ -49,12 +49,10 @@ class ObjectPool {
 		} else {
 			if constexpr (isLazy) {
 				obj->~T();
-			} else if constexpr (hasClear<T>) {
-				obj->Clear();
+			} else if constexpr (hasReset<T>) {
+				obj->Reset();
 			}
 		}
-
-		return true;
 	}
 
 	T* Get(size_t idx) { return reinterpret_cast<T*>(&pool_[idx * sizeof(T)]); }

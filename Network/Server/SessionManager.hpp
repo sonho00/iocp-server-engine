@@ -20,17 +20,17 @@ class SessionManager {
 	bool RegisterSession(uint64_t handle);
 
 	SharedPoolPtr<Session> CreateSession();
-	bool ConnectSession(uint64_t handle);
+	void ConnectSession(uint64_t handle);
 	void DisconnectSession(uint64_t handle);
 
 	bool LogInSession(uint64_t handle, const Account& account);
-	bool LogOutSession(uint64_t handle);
+	void LogOutSession(uint64_t handle);
 
 	SharedPoolPtr<Session> GetSession(uint64_t handle);
 	std::vector<uint64_t> GetSessionsInState(SessionState state);
 
 	SessionState GetState(uint64_t handle);
-	bool SetState(uint64_t handle, SessionState newState);
+	void SetState(uint64_t handle, SessionState newState);
 
 	[[nodiscard]] AccountManager* GetAccountManager() const {
 		return accountManager_;

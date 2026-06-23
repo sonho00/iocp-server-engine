@@ -29,14 +29,14 @@ class Session {
 
 	void Init();
 
-	bool RegisterRead();
 	bool SendPacket(const PACKET_HEADER& header);
 
 	bool HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred);
 
+	bool RegisterAccept(SOCKET listenSocket);
 	bool Connect();
 	bool Disconnect();
-	bool Clear();
+	bool Reset();
 
 	[[nodiscard]] SOCKET GetSocket() const { return socket_; }
 	[[nodiscard]] uint64_t GetHandle() const { return handle_; }
@@ -46,15 +46,17 @@ class Session {
 	[[nodiscard]] Listener* GetListener() const { return listener_; }
 	void SetListener(Listener* listener) { listener_ = listener; }
 
-	OverlappedEx readOv_;
-	OverlappedEx writeOv_;
+	OverlappedEx recvOv_;
+	OverlappedEx sendOv_;
 	OverlappedEx disconnectOv_;
 
    private:
-	bool RegisterWriteInternal();
+	bool RegisterRecv();
+	bool RegisterSend();
+	bool RegisterDisconnect();
 
-	bool OnRead(DWORD bytesTransferred);
-	bool OnWrite(DWORD bytesTransferred);
+	bool OnRecv(DWORD bytesTransferred);
+	bool OnSend(DWORD bytesTransferred);
 
 	SOCKET socket_ = INVALID_SOCKET;
 	uint64_t handle_ = SparseSet<Config::kMaxSession>::kInvalidHandle;
@@ -66,6 +68,6 @@ class Session {
 
 	bool isSending_ = false;
 
-	std::mutex writeMtx_;
+	std::mutex sendMtx_;
 	std::mutex connectMtx_;
 };

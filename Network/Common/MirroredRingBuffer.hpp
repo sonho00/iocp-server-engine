@@ -13,7 +13,7 @@ class MirroredRingBuffer {
 	[[nodiscard]] char* GetBuffer() const { return buffer_; }
 	[[nodiscard]] size_t GetSize() const { return size_; }
 
-	void Clear() { ZeroMemory(buffer_, size_); }
+	void Reset() { ZeroMemory(buffer_, size_); }
 
    private:
 	HANDLE hMap_;

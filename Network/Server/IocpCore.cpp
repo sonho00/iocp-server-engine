@@ -105,7 +105,7 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 	if (overlappedEx.ioType_ == IO_TYPE::kDisconnect) {
 		LOG_ERROR("[Session:{}][Error:{}] Disconnect operation failed",
 				  sessionPtr->GetHandle(), errorCode);
-		sessionPtr->Clear();
+		sessionPtr->Reset();
 	} else {
 		overlappedEx.sessionPtr_.Reset();
 		sessionPtr->Disconnect();
@@ -132,54 +132,62 @@ void IocpCore::HandleError(OverlappedEx& overlappedEx, int errorCode) {
 	}
 }
 
+void IocpCore::DispatchAccept(SharedPoolPtr<Session>& sessionPtr) {
+	if (sessionPtr->GetListener()->HandleAccept(sessionPtr)) {
+		LOG_INFO("[Session:{}] Accept completed", sessionPtr->GetHandle());
+	} else {
+		LOG_WARN("[Session:{}] Failed to handle accept",
+				 sessionPtr->GetHandle());
+		sessionPtr->Disconnect();
+	}
+}
+
+void IocpCore::DispatchDisconnect(SharedPoolPtr<Session>& sessionPtr) {
+	LOG_INFO("[Session:{}] Disconnect completed", sessionPtr->GetHandle());
+	sessionPtr->Reset();
+}
+
+void IocpCore::DispatchRecvSend(SharedPoolPtr<Session>& sessionPtr,
+								OverlappedEx& overlappedEx,
+								DWORD bytesTransferred) {
+	LOG_DEBUG("[Session:{}] Dispatching I/O event - IOType: {}",
+			  sessionPtr->GetHandle(), static_cast<int>(overlappedEx.ioType_));
+
+	if (bytesTransferred == 0) {
+		LOG_INFO("[Session:{}] Connection closed by client",
+				 sessionPtr->GetHandle());
+		sessionPtr->Disconnect();
+		return;
+	}
+
+	if (!sessionPtr->HandleIO(overlappedEx, bytesTransferred)) {
+		LOG_ERROR("[Session:{}] Failed to handle I/O operation",
+				  sessionPtr->GetHandle());
+		sessionPtr->Disconnect();
+	}
+}
+
 void IocpCore::Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred) {
 	SharedPoolPtr<Session> sessionPtr = overlappedEx.sessionPtr_;
 	overlappedEx.sessionPtr_.Reset();
 
 	switch (overlappedEx.ioType_) {
-		case IO_TYPE::kAccept: {
-			if (sessionPtr->GetListener()->HandleAccept(sessionPtr)) {
-				LOG_INFO("[Session:{}] Accept completed",
-						 sessionPtr->GetHandle());
-			} else {
-				LOG_WARN("[Session:{}] Failed to handle accept",
-						 sessionPtr->GetHandle());
-				sessionPtr->Disconnect();
-			}
+		case IO_TYPE::kAccept:
+			DispatchAccept(sessionPtr);
 			break;
-		}
-		case IO_TYPE::kDisconnect: {
-			LOG_INFO("[Session:{}] Disconnect completed",
-					 sessionPtr->GetHandle());
-			sessionPtr->Clear();
+		case IO_TYPE::kDisconnect:
+			DispatchDisconnect(sessionPtr);
 			break;
-		}
 		case IO_TYPE::kRecv:
-		case IO_TYPE::kSend: {
-			LOG_DEBUG("[Session:{}] Dispatching I/O event - IOType: {}",
-					  sessionPtr->GetHandle(),
-					  static_cast<int>(overlappedEx.ioType_));
-
-			if (bytesTransferred == 0) {
-				LOG_INFO("[Session:{}] Connection closed by client",
-						 sessionPtr->GetHandle());
-				sessionPtr->Disconnect();
-				return;
-			}
-
-			if (!sessionPtr->HandleIO(overlappedEx, bytesTransferred)) {
-				LOG_ERROR("[Session:{}] Failed to handle I/O operation",
-						  sessionPtr->GetHandle());
-				sessionPtr->Disconnect();
-			}
+		case IO_TYPE::kSend:
+			DispatchRecvSend(sessionPtr, overlappedEx, bytesTransferred);
 			break;
-		}
 		default:
 			LOG_ERROR("[Session:{}] Unknown I/O type: {}",
 					  sessionPtr->GetHandle(),
 					  static_cast<int>(overlappedEx.ioType_));
 			sessionPtr->Disconnect();
-			return;
+			break;
 	}
 }
 // NOLINTEND(performance-no-int-to-ptr)

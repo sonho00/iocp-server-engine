@@ -17,16 +17,18 @@ class IocpCore {
 	bool Start(size_t threadCount);
 	[[nodiscard]] bool Register(SOCKET socket, ULONG_PTR completionKey) const;
 
-	void SetListener(Listener* listener) { listener_ = listener; }
-
    private:
 	void WorkerThread();
 
 	void HandleError(OverlappedEx& overlappedEx, int errorCode);
+	static void DispatchAccept(SharedPoolPtr<Session>& sessionPtr);
+	static void DispatchDisconnect(SharedPoolPtr<Session>& sessionPtr);
+	static void DispatchRecvSend(SharedPoolPtr<Session>& sessionPtr,
+								 OverlappedEx& overlappedEx,
+								 DWORD bytesTransferred);
 	static void Dispatch(OverlappedEx& overlappedEx, DWORD bytesTransferred);
 
 	std::vector<std::thread> threads_;
 	HANDLE hIocp_;
-	Listener* listener_ = nullptr;
 	std::atomic<bool> isShuttingDown_ = false;
 };
