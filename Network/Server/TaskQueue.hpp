@@ -5,6 +5,8 @@
 #include <mutex>
 #include <queue>
 
+#include "Network/Common/CSMutex.hpp"
+
 class TaskQueue {
    public:
 	void Shutdown() {
@@ -13,13 +15,13 @@ class TaskQueue {
 	}
 
 	void Push(std::function<void()> task) {
-		std::lock_guard<std::mutex> lock(mutex_);
+		std::lock_guard<CSMutex> lock(mutex_);
 		tasks_.push(std::move(task));
 		cv_.notify_one();
 	}
 
 	std::function<void()> Pop() {
-		std::unique_lock<std::mutex> lock(mutex_);
+		std::unique_lock<CSMutex> lock(mutex_);
 		cv_.wait(lock, [this] {
 			return !tasks_.empty() ||
 				   isShuttingDown_.load(std::memory_order_acquire);
@@ -34,7 +36,7 @@ class TaskQueue {
 
    private:
 	std::queue<std::function<void()>> tasks_;
-	std::mutex mutex_;
-	std::condition_variable cv_;
+	CSMutex mutex_;
+	std::condition_variable_any cv_;
 	std::atomic<bool> isShuttingDown_{false};
 };

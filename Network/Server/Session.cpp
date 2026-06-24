@@ -198,7 +198,7 @@ bool Session::RegisterDisconnect() {
 }
 
 bool Session::OnSend(DWORD bytesTransferred) {
-	std::lock_guard<std::mutex> lock(sendMtx_);
+	std::lock_guard<CSMutex> lock(sendCs_);
 	assert(isSending_);
 
 	sendOv_.recvPos_ += bytesTransferred;
@@ -222,7 +222,7 @@ bool Session::OnSend(DWORD bytesTransferred) {
 }
 
 bool Session::SendPacket(const PACKET_HEADER& header) {
-	std::lock_guard<std::mutex> lock(sendMtx_);
+	std::lock_guard<CSMutex> lock(sendCs_);
 	if (sendOv_.sendPos_ - sendOv_.recvPos_ + header.size >
 		sendOv_.buffer_.GetSize()) {
 		LOG_WARN("[Session:{}] Send buffer overflow detected", handle_);
@@ -259,7 +259,7 @@ bool Session::HandleIO(OverlappedEx& ovEx, DWORD bytesTransferred) {
 
 bool Session::Connect() {
 	{
-		std::lock_guard<std::mutex> lock(connectMtx_);
+		std::lock_guard<CSMutex> lock(connectCs_);
 		if (sessionManager_->GetState(handle_) != SessionState::kPending) {
 			LOG_ERROR("[Session:{}] Invalid state for Connect: {}", handle_,
 					  static_cast<uint8_t>(sessionManager_->GetState(handle_)));
@@ -291,7 +291,7 @@ bool Session::Connect() {
 
 bool Session::Disconnect() {
 	{
-		std::lock_guard<std::mutex> lock(connectMtx_);
+		std::lock_guard<CSMutex> lock(connectCs_);
 		switch (sessionManager_->GetState(handle_)) {
 			case SessionState::kPending:
 			case SessionState::kConnected:
