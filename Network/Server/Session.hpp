@@ -2,8 +2,7 @@
 
 #include <WinSock2.h>
 
-#include <mutex>
-
+#include "Network/Common/CSMutex.hpp"
 #include "Network/Common/Pool/SparseSet.hpp"
 #include "Network/Common/Protocol.hpp"
 #include "OverlappedEx.hpp"
@@ -68,6 +67,6 @@ class Session {
 
 	bool isSending_ = false;
 
-	std::mutex sendMtx_;
-	std::mutex connectMtx_;
+	CSMutex sendCs_;
+	CSMutex connectCs_;
 };

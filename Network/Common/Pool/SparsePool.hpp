@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "ISparsePool.hpp"
+#include "Network/Common/CSMutex.hpp"
 #include "ObjectPool.hpp"
 #include "SharedPoolPtr.hpp"
 #include "SparseSet.hpp"
@@ -41,9 +42,9 @@ class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {
 	void AddRef(uint64_t handle) override;
 	void ReleaseRef(uint64_t handle) override;
 
-	ObjectPool<Slot, N, isLazy> pool_;
+	CSMutex cs_;
 	PostReleaseFunc postReleaseFunc_;
-	std::mutex mutex_;
+	ObjectPool<Slot, N, isLazy> pool_;
 };
 
 template <typename T, size_t N, size_t StateCount, bool isLazy>
@@ -53,7 +54,7 @@ SharedPoolPtr<T> SparsePool<T, N, StateCount, isLazy>::Acquire(size_t state,
 	uint64_t handle;
 	Slot* slot;
 	{
-		std::lock_guard lock(mutex_);
+		std::lock_guard<CSMutex> lock(cs_);
 		handle = SparseSet<N, StateCount>::Pop(state);
 		if (!IsValid(handle)) return nullptr;
 
@@ -67,7 +68,7 @@ SharedPoolPtr<T> SparsePool<T, N, StateCount, isLazy>::Acquire(size_t state,
 template <typename T, size_t N, size_t StateCount, bool isLazy>
 void SparsePool<T, N, StateCount, isLazy>::MoveToState(uint64_t handle,
 													   size_t newState) {
-	std::lock_guard lock(mutex_);
+	std::lock_guard<CSMutex> lock(cs_);
 	SparseSet<N, StateCount>::MoveToState(handle, newState);
 }
 
@@ -99,7 +100,7 @@ void SparsePool<T, N, StateCount, isLazy>::ReleaseRef(uint64_t handle) {
 		std::atomic_thread_fence(std::memory_order_acquire);
 		pool_.Release(idx);
 		{
-			std::lock_guard lock(mutex_);
+			std::lock_guard<CSMutex> lock(cs_);
 			SparseSet<N, StateCount>::Push(handle);
 		}
 		if (postReleaseFunc_) {
