@@ -6,11 +6,12 @@
 #include <mutex>
 #include <utility>
 
+#include "Common/CSMutex.hpp"
 #include "ISparsePool.hpp"
-#include "Network/Common/CSMutex.hpp"
 #include "ObjectPool.hpp"
 #include "SharedPoolPtr.hpp"
 #include "SparseSet.hpp"
+
 
 template <typename T, size_t N, size_t StateCount = 2, bool isLazy = false>
 class SparsePool : public ISparsePool<T>, public SparseSet<N, StateCount> {

@@ -6,13 +6,14 @@
 
 #include "Account.hpp"
 #include "AccountManager.hpp"
+#include "Common/Logger.hpp"
+#include "Common/Pool/SharedPoolPtr.hpp"
+#include "Common/Pool/SparsePool.hpp"
 #include "IocpCore.hpp"
 #include "Listener.hpp"
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/Pool/SharedPoolPtr.hpp"
-#include "Network/Common/Pool/SparsePool.hpp"
 #include "PacketHandler.hpp"
 #include "Session.hpp"
+
 
 bool SessionManager::Init(IocpCore& iocpCore, Listener& listener,
 						  AccountManager& accountManager,

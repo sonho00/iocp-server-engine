@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "Network/Common/Protocol.hpp"
+#include "Common/Protocol.hpp"
 #include "Tests/Base/Client.hpp"
 
 TEST(StickyPacketsTest, VerifyDataIntegrity) {

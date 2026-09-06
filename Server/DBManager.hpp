@@ -6,8 +6,8 @@
 #include <string>
 #include <utility>
 
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/SQLite/sqlite3.h"
+#include "Common/Logger.hpp"
+#include "Common/SQLite/sqlite3.h"
 
 class DBManager {
 	using StmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;

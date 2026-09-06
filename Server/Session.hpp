@@ -2,9 +2,9 @@
 
 #include <WinSock2.h>
 
-#include "Network/Common/CSMutex.hpp"
-#include "Network/Common/Pool/SparseSet.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/CSMutex.hpp"
+#include "Common/Pool/SparseSet.hpp"
+#include "Common/Protocol.hpp"
 #include "OverlappedEx.hpp"
 
 enum class SessionState : uint8_t {

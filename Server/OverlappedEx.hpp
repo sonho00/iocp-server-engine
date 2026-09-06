@@ -3,10 +3,10 @@
 #include <WinSock2.h>
 #include <minwinbase.h>
 
-#include "Network/Common/Config.hpp"
-#include "Network/Common/MirroredRingBuffer.hpp"
-#include "Network/Common/Pool/SharedPoolPtr.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/Config.hpp"
+#include "Common/MirroredRingBuffer.hpp"
+#include "Common/Pool/SharedPoolPtr.hpp"
+#include "Common/Protocol.hpp"
 
 class Session;
 

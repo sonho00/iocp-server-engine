@@ -3,7 +3,7 @@
 #include <thread>
 #include <vector>
 
-#include "Network/Common/Logger.hpp"
+#include "Common/Logger.hpp"
 #include "Tests/Base/Client.hpp"
 
 class StressClient : public Client {

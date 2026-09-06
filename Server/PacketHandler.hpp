@@ -5,9 +5,9 @@
 #include <thread>
 #include <vector>
 
-#include "Network/Common/Config.hpp"
-#include "Network/Common/Pool/SparsePool.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/Config.hpp"
+#include "Common/Pool/SparsePool.hpp"
+#include "Common/Protocol.hpp"
 #include "TaskQueue.hpp"
 
 class SessionManager;

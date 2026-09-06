@@ -36,8 +36,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-file(GLOB_RECURSE COMMON_SRC "Network/Common/*")
-file(GLOB_RECURSE SERVER_SRC "Network/Server/*.cpp")
+file(GLOB_RECURSE COMMON_SRC "Common/*")
+file(GLOB_RECURSE SERVER_SRC "Server/*.cpp")
 file(GLOB_RECURSE TEST_SRC "Tests/*.cpp")
 
 add_executable(server ${SERVER_SRC} ${COMMON_SRC})

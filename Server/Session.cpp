@@ -6,8 +6,8 @@
 #include <cstring>
 #include <mutex>
 
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/Logger.hpp"
+#include "Common/Protocol.hpp"
 #include "OverlappedEx.hpp"
 #include "PacketHandler.hpp"
 #include "ServerUtils.hpp"

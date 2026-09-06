@@ -2,6 +2,7 @@
 # CMake & Build
 # =========================
 build/
+out/
 compile_commands.json
 
 # =========================

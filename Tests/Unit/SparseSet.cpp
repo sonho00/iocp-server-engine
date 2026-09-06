@@ -1,4 +1,4 @@
-#include "Network/Common/Pool/SparseSet.hpp"
+#include "Common/Pool/SparseSet.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "Network/Common/Protocol.hpp"
+#include "Common/Protocol.hpp"
 #include "Tests/Base/Client.hpp"
 
 TEST(FragmentationTest, HandleFragmentedPacket) {

@@ -3,8 +3,8 @@
 #include <array>
 #include <vector>
 
-#include "Network/Common/Pool/SharedPoolPtr.hpp"
-#include "Network/Common/Pool/SparsePool.hpp"
+#include "Common/Pool/SharedPoolPtr.hpp"
+#include "Common/Pool/SparsePool.hpp"
 #include "Session.hpp"
 
 class Account;

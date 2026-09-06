@@ -6,10 +6,10 @@
 
 #include "Account.hpp"
 #include "AccountManager.hpp"
-#include "Network/Common/Config.hpp"
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/Pool/SharedPoolPtr.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/Config.hpp"
+#include "Common/Logger.hpp"
+#include "Common/Pool/SharedPoolPtr.hpp"
+#include "Common/Protocol.hpp"
 #include "Session.hpp"
 #include "SessionManager.hpp"
 
@@ -81,21 +81,25 @@ SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket() {
 	return packetPool_.Acquire();
 }
 
-SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket(const PACKET_HEADER& header) {
+SharedPoolPtr<PacketBlock> PacketHandler::AcquirePacket(
+	const PACKET_HEADER& header) {
 	auto packet = packetPool_.Acquire();
 	std::memcpy(packet->data(), &header, header.size);
 	return packet;
 }
 
-void PacketHandler::SendToSession(uint64_t sessionHandle, const PACKET_HEADER& header) {
+void PacketHandler::SendToSession(uint64_t sessionHandle,
+								  const PACKET_HEADER& header) {
 	auto session = sessionManager_->GetSession(sessionHandle);
 	if (session.IsValid()) {
 		session->SendPacket(header);
 	}
 }
 
-void PacketHandler::Broadcast(uint64_t sessionHandle, const PACKET_HEADER& header) {
-	auto sessions = sessionManager_->GetSessionsInState(SessionState::kConnected);
+void PacketHandler::Broadcast(uint64_t sessionHandle,
+							  const PACKET_HEADER& header) {
+	auto sessions =
+		sessionManager_->GetSessionsInState(SessionState::kConnected);
 	for (uint64_t handle : sessions) {
 		if (handle != sessionHandle) {
 			SendToSession(handle, header);

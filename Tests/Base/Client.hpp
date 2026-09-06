@@ -4,8 +4,8 @@
 
 #include <cstdint>
 
-#include "Network/Common/Protocol.hpp"
-#include "Network/Common/WSAManager.hpp"
+#include "Common/Protocol.hpp"
+#include "Common/WSAManager.hpp"
 
 class Client {
    public:

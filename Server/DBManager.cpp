@@ -1,7 +1,7 @@
 #include "DBManager.hpp"
 
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/SQLite/sqlite3.h"
+#include "Common/Logger.hpp"
+#include "Common/SQLite/sqlite3.h"
 
 DBManager::DBManager() {
 	int result = sqlite3_open(":memory:", &db_);

@@ -6,7 +6,7 @@
 #include <numeric>
 #include <vector>
 
-#include "Network/Common/Logger.hpp"
+#include "Common/Logger.hpp"
 
 template <size_t N, size_t stateCount = 2>
 class SparseSet {

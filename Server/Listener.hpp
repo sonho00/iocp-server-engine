@@ -6,7 +6,7 @@
 #include <atomic>
 #include <cstdint>
 
-#include "Network/Common/Pool/SharedPoolPtr.hpp"
+#include "Common/Pool/SharedPoolPtr.hpp"
 #include "OverlappedEx.hpp"
 
 class IocpCore;

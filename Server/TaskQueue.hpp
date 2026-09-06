@@ -5,7 +5,7 @@
 #include <mutex>
 #include <queue>
 
-#include "Network/Common/CSMutex.hpp"
+#include "Common/CSMutex.hpp"
 
 class TaskQueue {
    public:

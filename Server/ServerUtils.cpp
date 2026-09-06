@@ -2,7 +2,7 @@
 
 #include <WinSock2.h>
 
-#include "Network/Common/Logger.hpp"
+#include "Common/Logger.hpp"
 
 namespace ServerUtils {
 NetFuncs::NetFuncs() {

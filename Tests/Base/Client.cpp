@@ -3,8 +3,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#include "Network/Common/Logger.hpp"
-#include "Network/Common/Protocol.hpp"
+#include "Common/Logger.hpp"
+#include "Common/Protocol.hpp"
 
 Client::~Client() {
 	if (socket_ != INVALID_SOCKET) {
